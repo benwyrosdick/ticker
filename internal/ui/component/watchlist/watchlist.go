@@ -40,6 +40,9 @@ type SetAssetsMsg []c.Asset
 // Messages for updating assets
 type UpdateAssetsMsg []c.Asset
 
+// Messages for changing sort
+type ChangeSortMsg string
+
 // NewModel returns a model with default values
 func NewModel(config Config) *Model {
 	return &Model{
@@ -137,6 +140,25 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 		}
 
 		return m, tea.Batch(cmds...)
+
+	case ChangeSortMsg:
+
+		// Update the sorter with the new sort option
+		m.config.Sort = string(msg)
+		m.sorter = s.NewSorter(m.config.Sort)
+
+		// Re-sort and update the assets
+		assets := m.sorter(m.assets)
+		m.assets = assets
+
+		// Update rows with the new order
+		for i, asset := range assets {
+			if i < len(m.rows) {
+				m.rows[i], _ = m.rows[i].Update(row.UpdateAssetMsg(asset))
+			}
+		}
+
+		return m, nil
 
 	}
 
