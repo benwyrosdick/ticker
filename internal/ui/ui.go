@@ -373,6 +373,8 @@ func footer(width int, time string, groupSelectedName string, currentSort string
 		sortDisplayName = "user"
 	}
 
+	helpText := " q: exit ↑: scroll up ↓: scroll down s: change sort (" + sortDisplayName + ") ⭾: change group"
+
 	return grid.Render(grid.Grid{
 		Rows: []grid.Row{
 			{
@@ -380,7 +382,7 @@ func footer(width int, time string, groupSelectedName string, currentSort string
 				Cells: []grid.Cell{
 					{Text: styleLogo(" ticker "), Width: 8},
 					{Text: styleGroup(" " + groupSelectedName + " "), Width: len(groupSelectedName) + 2, VisibleMinWidth: 95},
-					{Text: styleHelp(" q: exit ↑: scroll up ↓: scroll down s: change sort (" + sortDisplayName + ") ⭾: change group"), Width: 72},
+					{Text: styleHelp(helpText), Width: len(helpText)},
 					{Text: styleHelp("↻  " + time), Align: grid.Right},
 				},
 			},

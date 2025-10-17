@@ -143,6 +143,9 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 
 	case ChangeSortMsg:
 
+		var cmd tea.Cmd
+		cmds := make([]tea.Cmd, 0)
+
 		// Update the sorter with the new sort option
 		m.config.Sort = string(msg)
 		m.sorter = s.NewSorter(m.config.Sort)
@@ -151,14 +154,30 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 		assets := m.sorter(m.assets)
 		m.assets = assets
 
-		// Update rows with the new order
+		// Update rows with the new order (similar to SetAssetsMsg)
 		for i, asset := range assets {
 			if i < len(m.rows) {
-				m.rows[i], _ = m.rows[i].Update(row.UpdateAssetMsg(asset))
+				m.rows[i], cmd = m.rows[i].Update(row.UpdateAssetMsg(asset))
+				cmds = append(cmds, cmd)
+			} else {
+				// Create new row if needed
+				m.rows = append(m.rows, row.New(row.Config{
+					Separate:              m.config.Separate,
+					ExtraInfoExchange:     m.config.ExtraInfoExchange,
+					ExtraInfoFundamentals: m.config.ExtraInfoFundamentals,
+					ShowHoldings:          m.config.ShowHoldings,
+					Styles:                m.config.Styles,
+					Asset:                 asset,
+				}))
 			}
 		}
 
-		return m, nil
+		// Remove extra rows if needed
+		if len(assets) < len(m.rows) {
+			m.rows = m.rows[:len(assets)]
+		}
+
+		return m, tea.Batch(cmds...)
 
 	}
 
