@@ -244,5 +244,64 @@ var _ = Describe("Asset", func() {
 			})
 		})
 
+		When("there are options", func() {
+			It("should return assets with option information for call options", func() {
+				inputContext := c.Context{}
+				inputAssetGroupQuote := fixtureAssetGroupQuote
+				inputAssetGroupQuote.AssetGroup.ConfigAssetGroup.Options = []c.Option{
+					{
+						Symbol:      "MSFT",
+						StrikePrice: 200.0,
+						Type:        "call",
+						Premium:     10.0,
+						Contracts:   2,
+					},
+				}
+
+				outputAssets, _ := GetAssets(inputContext, inputAssetGroupQuote)
+
+				// Find the MSFT asset
+				var msftAsset *c.Asset
+				for i := range outputAssets {
+					if outputAssets[i].Symbol == "MSFT" {
+						msftAsset = &outputAssets[i]
+						break
+					}
+				}
+
+				Expect(msftAsset).NotTo(BeNil())
+				Expect(msftAsset.QuoteOption.StrikePrice).To(Equal(200.0))
+				Expect(msftAsset.QuoteOption.Type).To(Equal("call"))
+				Expect(msftAsset.QuoteOption.Premium).To(Equal(10.0))
+				Expect(msftAsset.QuoteOption.Contracts).To(Equal(2.0))
+				Expect(msftAsset.QuoteOption.BreakevenPrice).To(Equal(210.0)) // strike + premium
+				Expect(msftAsset.QuoteOption.DiffToStrike).To(Equal(20.0))    // 220 - 200
+			})
+
+			It("should return assets with option information for put options", func() {
+				inputContext := c.Context{}
+				inputAssetGroupQuote := fixtureAssetGroupQuote
+				inputAssetGroupQuote.AssetGroup.ConfigAssetGroup.Options = []c.Option{
+					{
+						Symbol:      "TWKS",
+						StrikePrice: 100.0,
+						Type:        "put",
+						Premium:     3.0,
+						Contracts:   1,
+					},
+				}
+
+				outputAssets, _ := GetAssets(inputContext, inputAssetGroupQuote)
+
+				Expect(outputAssets).To(HaveLen(3))
+				Expect(outputAssets[0].QuoteOption.StrikePrice).To(Equal(100.0))
+				Expect(outputAssets[0].QuoteOption.Type).To(Equal("put"))
+				Expect(outputAssets[0].QuoteOption.Premium).To(Equal(3.0))
+				Expect(outputAssets[0].QuoteOption.Contracts).To(Equal(1.0))
+				Expect(outputAssets[0].QuoteOption.BreakevenPrice).To(Equal(97.0)) // strike - premium
+				Expect(outputAssets[0].QuoteOption.DiffToStrike).To(Equal(10.0))   // 110 - 100
+			})
+		})
+
 	})
 })
