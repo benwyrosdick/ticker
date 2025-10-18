@@ -380,6 +380,16 @@ func textPosition(asset *c.Asset, styles c.Styles) string {
 
 func textQuoteExtended(asset *c.Asset, styles c.Styles) string {
 
+	if asset.Class == c.AssetClassOption && asset.QuoteOption.StrikePrice == 0.0 {
+		return ""
+	}
+
+	if asset.Class == c.AssetClassOption {
+		return styles.Text(u.ConvertFloatToStringWithCommas(asset.QuoteOption.StrikePrice, asset.Meta.IsVariablePrecision)) +
+			"\n" +
+			styles.Text(u.ConvertFloatToStringWithCommas(asset.QuoteOption.BreakevenPrice, asset.Meta.IsVariablePrecision))
+	}
+
 	if asset.Class == c.AssetClassFuturesContract && asset.QuoteFutures.IndexPrice == 0.0 {
 		return ""
 	}
@@ -402,6 +412,16 @@ func textQuoteExtended(asset *c.Asset, styles c.Styles) string {
 }
 
 func textQuoteExtendedLabels(asset *c.Asset, styles c.Styles) string {
+
+	if asset.Class == c.AssetClassOption && asset.QuoteOption.StrikePrice == 0.0 {
+		return ""
+	}
+
+	if asset.Class == c.AssetClassOption {
+		return styles.TextLabel("Strike Price:") +
+			"\n" +
+			styles.TextLabel("Breakeven:")
+	}
 
 	if asset.Class == c.AssetClassFuturesContract && asset.QuoteFutures.IndexPrice == 0.0 {
 		return ""
@@ -448,6 +468,15 @@ func textPositionExtendedLabels(asset *c.Asset, styles c.Styles) string {
 
 func textQuoteRange(asset *c.Asset, styles c.Styles) string {
 
+	if asset.Class == c.AssetClassOption {
+		if asset.QuoteOption.StrikePrice != 0.0 {
+			return u.ConvertFloatToStringWithCommas(asset.QuoteOption.DiffToStrike, asset.Meta.IsVariablePrecision) +
+				"\n" +
+				u.ConvertFloatToStringWithCommas(asset.QuoteOption.Premium, asset.Meta.IsVariablePrecision)
+		}
+		return ""
+	}
+
 	if asset.Class == c.AssetClassFuturesContract {
 
 		if asset.QuotePrice.PriceDayHigh != 0.0 && asset.QuotePrice.PriceDayLow != 0.0 {
@@ -477,6 +506,15 @@ func textQuoteRange(asset *c.Asset, styles c.Styles) string {
 }
 
 func textQuoteRangeLabels(asset *c.Asset, styles c.Styles) string {
+
+	if asset.Class == c.AssetClassOption {
+		if asset.QuoteOption.StrikePrice != 0.0 {
+			return styles.TextLabel("Diff to Strike:") +
+				"\n" +
+				styles.TextLabel("Premium:")
+		}
+		return ""
+	}
 
 	if asset.Class == c.AssetClassFuturesContract {
 
