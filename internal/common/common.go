@@ -47,6 +47,7 @@ type ConfigAssetGroup struct {
 	Name      string   `yaml:"name"`
 	Watchlist []string `yaml:"watchlist"`
 	Holdings  []Lot    `yaml:"holdings"`
+	Options   []Option `yaml:"options"`
 }
 
 type AssetGroup struct {
@@ -102,6 +103,15 @@ type Lot struct {
 	Quantity  float64 `yaml:"quantity"`
 	FixedCost float64 `yaml:"fixed_cost"`
 	// FixedProperties LotFixedProperties `yaml:"fixed_properties"`
+}
+
+// Option represents an option contract
+type Option struct {
+	Symbol      string  `yaml:"symbol"`
+	StrikePrice float64 `yaml:"strike_price"`
+	Type        string  `yaml:"type"` // "put" or "call"
+	Premium     float64 `yaml:"premium"`
+	Contracts   float64 `yaml:"contracts"`
 }
 
 // type LotFixedProperties struct {
@@ -192,6 +202,15 @@ type QuoteFutures struct {
 	Expiry           string
 }
 
+type QuoteOption struct {
+	StrikePrice     float64
+	BreakevenPrice  float64
+	Type            string  // "put" or "call"
+	Premium         float64
+	Contracts       float64
+	DiffToStrike    float64
+}
+
 type Exchange struct {
 	Name                    string
 	Delay                   float64
@@ -219,6 +238,7 @@ type Asset struct {
 	QuotePrice    QuotePrice
 	QuoteExtended QuoteExtended
 	QuoteFutures  QuoteFutures
+	QuoteOption   QuoteOption
 	QuoteSource   QuoteSource
 	Exchange      Exchange
 	Meta          Meta
@@ -233,6 +253,7 @@ const (
 	AssetClassPrivateSecurity
 	AssetClassUnknown
 	AssetClassFuturesContract
+	AssetClassOption
 )
 
 type QuoteSource int
@@ -255,6 +276,7 @@ type AssetQuote struct {
 	QuotePrice    QuotePrice
 	QuoteExtended QuoteExtended
 	QuoteFutures  QuoteFutures
+	QuoteOption   QuoteOption
 	QuoteSource   QuoteSource
 	Exchange      Exchange
 	Meta          Meta

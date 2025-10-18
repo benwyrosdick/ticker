@@ -28,6 +28,7 @@ func GetAssets(ctx c.Context, assetGroupQuote c.AssetGroupQuote) ([]c.Asset, Hol
 	var holdingSummary HoldingSummary
 	assets := make([]c.Asset, 0)
 	holdingsBySymbol := getLots(assetGroupQuote.AssetGroup.ConfigAssetGroup.Holdings)
+	optionsBySymbol := getOptions(assetGroupQuote.AssetGroup.ConfigAssetGroup.Options)
 	orderIndex := make(map[string]int)
 
 	for i, symbol := range assetGroupQuote.AssetGroup.ConfigAssetGroup.Holdings {
@@ -36,9 +37,17 @@ func GetAssets(ctx c.Context, assetGroupQuote c.AssetGroupQuote) ([]c.Asset, Hol
 		}
 	}
 
+	optionOffset := len(assetGroupQuote.AssetGroup.ConfigAssetGroup.Holdings)
+	for i, option := range assetGroupQuote.AssetGroup.ConfigAssetGroup.Options {
+		if _, exists := orderIndex[option.Symbol]; !exists {
+			orderIndex[strings.ToLower(option.Symbol)] = optionOffset + i
+		}
+	}
+
+	watchlistOffset := optionOffset + len(assetGroupQuote.AssetGroup.ConfigAssetGroup.Options)
 	for i, symbol := range assetGroupQuote.AssetGroup.ConfigAssetGroup.Watchlist {
 		if _, exists := orderIndex[symbol]; !exists {
-			orderIndex[strings.ToLower(symbol)] = i + len(assetGroupQuote.AssetGroup.ConfigAssetGroup.Holdings)
+			orderIndex[strings.ToLower(symbol)] = watchlistOffset + i
 		}
 	}
 
@@ -48,6 +57,8 @@ func GetAssets(ctx c.Context, assetGroupQuote c.AssetGroupQuote) ([]c.Asset, Hol
 
 		holding := getHoldingFromAssetQuote(assetQuote, holdingsBySymbol, currencyRateByUse)
 		holdingSummary = addHoldingToHoldingSummary(holdingSummary, holding, currencyRateByUse)
+
+		quoteOption := getOptionFromAssetQuote(assetQuote, optionsBySymbol)
 
 		assets = append(assets, c.Asset{
 			Name:   assetQuote.Name,
@@ -61,6 +72,7 @@ func GetAssets(ctx c.Context, assetGroupQuote c.AssetGroupQuote) ([]c.Asset, Hol
 			QuotePrice:    convertAssetQuotePriceCurrency(currencyRateByUse, assetQuote.QuotePrice),
 			QuoteExtended: convertAssetQuoteExtendedCurrency(currencyRateByUse, assetQuote.QuoteExtended),
 			QuoteFutures:  assetQuote.QuoteFutures,
+			QuoteOption:   quoteOption,
 			QuoteSource:   assetQuote.QuoteSource,
 			Exchange:      assetQuote.Exchange,
 			Meta: c.Meta{
@@ -181,4 +193,48 @@ func getLots(lots []c.Lot) map[string]AggregatedLot {
 	}
 
 	return aggregatedLots
+}
+
+func getOptions(options []c.Option) map[string]c.Option {
+
+	if options == nil {
+		return map[string]c.Option{}
+	}
+
+	optionsBySymbol := map[string]c.Option{}
+
+	for _, option := range options {
+		optionsBySymbol[option.Symbol] = option
+	}
+
+	return optionsBySymbol
+}
+
+func getOptionFromAssetQuote(assetQuote c.AssetQuote, optionsBySymbol map[string]c.Option) c.QuoteOption {
+
+	if option, ok := optionsBySymbol[assetQuote.Symbol]; ok {
+		// Calculate breakeven price
+		// For a call: breakeven = strike + premium
+		// For a put: breakeven = strike - premium
+		breakevenPrice := option.StrikePrice
+		if strings.ToLower(option.Type) == "call" {
+			breakevenPrice = option.StrikePrice + option.Premium
+		} else if strings.ToLower(option.Type) == "put" {
+			breakevenPrice = option.StrikePrice - option.Premium
+		}
+
+		// Calculate difference to strike price (current price - strike price)
+		diffToStrike := assetQuote.QuotePrice.Price - option.StrikePrice
+
+		return c.QuoteOption{
+			StrikePrice:    option.StrikePrice,
+			BreakevenPrice: breakevenPrice,
+			Type:           option.Type,
+			Premium:        option.Premium,
+			Contracts:      option.Contracts,
+			DiffToStrike:   diffToStrike,
+		}
+	}
+
+	return c.QuoteOption{}
 }
