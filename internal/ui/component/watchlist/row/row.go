@@ -470,7 +470,9 @@ func textQuoteRange(asset *c.Asset, styles c.Styles) string {
 
 	if asset.Class == c.AssetClassOption {
 		if asset.QuoteOption.StrikePrice != 0.0 {
-			return u.ConvertFloatToStringWithCommas(asset.QuoteOption.DiffToStrike, asset.Meta.IsVariablePrecision)
+			return u.ConvertFloatToStringWithCommas(asset.QuoteOption.DiffToStrike, asset.Meta.IsVariablePrecision) +
+				"\n" +
+				u.ConvertFloatToStringWithCommas(asset.QuoteOption.Premium, asset.Meta.IsVariablePrecision)
 		}
 		return ""
 	}
@@ -507,7 +509,9 @@ func textQuoteRangeLabels(asset *c.Asset, styles c.Styles) string {
 
 	if asset.Class == c.AssetClassOption {
 		if asset.QuoteOption.StrikePrice != 0.0 {
-			return styles.TextLabel("Diff to Strike:")
+			return styles.TextLabel("Diff to Strike:") +
+				"\n" +
+				styles.TextLabel("Premium:")
 		}
 		return ""
 	}
