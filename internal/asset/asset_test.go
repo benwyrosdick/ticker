@@ -270,6 +270,7 @@ var _ = Describe("Asset", func() {
 				}
 
 				Expect(msftAsset).NotTo(BeNil())
+				Expect(msftAsset.Class).To(Equal(c.AssetClassOption))
 				Expect(msftAsset.QuoteOption.StrikePrice).To(Equal(200.0))
 				Expect(msftAsset.QuoteOption.Type).To(Equal("call"))
 				Expect(msftAsset.QuoteOption.Premium).To(Equal(10.0))
@@ -294,6 +295,7 @@ var _ = Describe("Asset", func() {
 				outputAssets, _ := GetAssets(inputContext, inputAssetGroupQuote)
 
 				Expect(outputAssets).To(HaveLen(3))
+				Expect(outputAssets[0].Class).To(Equal(c.AssetClassOption))
 				Expect(outputAssets[0].QuoteOption.StrikePrice).To(Equal(100.0))
 				Expect(outputAssets[0].QuoteOption.Type).To(Equal("put"))
 				Expect(outputAssets[0].QuoteOption.Premium).To(Equal(3.0))

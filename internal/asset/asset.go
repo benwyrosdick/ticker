@@ -60,10 +60,16 @@ func GetAssets(ctx c.Context, assetGroupQuote c.AssetGroupQuote) ([]c.Asset, Hol
 
 		quoteOption := getOptionFromAssetQuote(assetQuote, optionsBySymbol)
 
+		// Determine asset class - use AssetClassOption if we have option data
+		assetClass := assetQuote.Class
+		if quoteOption.StrikePrice != 0.0 {
+			assetClass = c.AssetClassOption
+		}
+
 		assets = append(assets, c.Asset{
 			Name:   assetQuote.Name,
 			Symbol: assetQuote.Symbol,
-			Class:  assetQuote.Class,
+			Class:  assetClass,
 			Currency: c.Currency{
 				FromCurrencyCode: assetQuote.Currency.FromCurrencyCode,
 				ToCurrencyCode:   currencyRateByUse.ToCurrencyCode,
