@@ -16,10 +16,14 @@ import (
 type Model struct {
 	width   int
 	summary asset.PositionSummary
+	header  string
 	styles  c.Styles
 }
 
 type SetSummaryMsg asset.PositionSummary
+
+// SetHeaderMsg sets a right-aligned label on the summary row (e.g. the current account)
+type SetHeaderMsg string
 
 // NewModel returns a model with default values
 func NewModel(ctx c.Context) *Model {
@@ -45,6 +49,10 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 		m.summary = asset.PositionSummary(msg)
 
 		return m, nil
+	case SetHeaderMsg:
+		m.header = string(msg)
+
+		return m, nil
 	}
 
 	return m, nil
@@ -68,26 +76,37 @@ func (m *Model) View() string {
 		m.styles.TextLabel("Cost: ") + m.styles.TextLabel(u.ConvertFloatToStringWithCommas(m.summary.Cost, false))
 	widthCost := ansi.PrintableRuneWidth(textValue)
 
+	summaryCells := []grid.Cell{
+		{
+			Text:  textChange,
+			Width: widthChange,
+		},
+		{
+			Text:            textValue,
+			Width:           widthValue,
+			VisibleMinWidth: widthChange + widthValue,
+		},
+		{
+			Text:            textCost,
+			Width:           widthCost,
+			VisibleMinWidth: widthChange + widthValue + widthCost,
+		},
+	}
+
+	// Right-aligned account label (e.g. the SnapTrade account), where there is room
+	if m.header != "" {
+		summaryCells = append(summaryCells, grid.Cell{
+			Text:            m.styles.TextLabel(m.header),
+			Align:           grid.Right,
+			VisibleMinWidth: widthChange + widthValue + widthCost + ansi.PrintableRuneWidth(m.header),
+		})
+	}
+
 	return grid.Render(grid.Grid{
 		Rows: []grid.Row{
 			{
 				Width: m.width,
-				Cells: []grid.Cell{
-					{
-						Text:  textChange,
-						Width: widthChange,
-					},
-					{
-						Text:            textValue,
-						Width:           widthValue,
-						VisibleMinWidth: widthChange + widthValue,
-					},
-					{
-						Text:            textCost,
-						Width:           widthCost,
-						VisibleMinWidth: widthChange + widthValue + widthCost,
-					},
-				},
+				Cells: summaryCells,
 			},
 			{
 				Width: m.width,
