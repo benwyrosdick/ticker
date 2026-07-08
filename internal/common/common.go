@@ -58,12 +58,14 @@ func (st ConfigSnapTrade) IsPersonal() bool {
 
 // ConfigColorScheme represents user defined color scheme
 type ConfigColorScheme struct {
-	Text          string `yaml:"text"`
-	TextLight     string `yaml:"text-light"`
-	TextLabel     string `yaml:"text-label"`
-	TextLine      string `yaml:"text-line"`
-	TextTag       string `yaml:"text-tag"`
-	BackgroundTag string `yaml:"background-tag"`
+	Text             string `yaml:"text"`
+	TextLight        string `yaml:"text-light"`
+	TextLabel        string `yaml:"text-label"`
+	TextLine         string `yaml:"text-line"`
+	TextTag          string `yaml:"text-tag"`
+	TextHeader       string `yaml:"text-header"`
+	BackgroundTag    string `yaml:"background-tag"`
+	BackgroundHeader string `yaml:"background-header"`
 }
 
 type ConfigAssetGroup struct {
@@ -161,13 +163,14 @@ type CurrencyRate struct {
 
 // Styles represents style functions for components of the UI
 type Styles struct {
-	Text      StyleFn
-	TextLight StyleFn
-	TextLabel StyleFn
-	TextBold  StyleFn
-	TextLine  StyleFn
-	TextPrice func(float64, string) string
-	Tag       StyleFn
+	Text       StyleFn
+	TextLight  StyleFn
+	TextLabel  StyleFn
+	TextBold   StyleFn
+	TextLine   StyleFn
+	TextHeader StyleFn
+	TextPrice  func(float64, string) string
+	Tag        StyleFn
 }
 
 // StyleFn is a function that styles text

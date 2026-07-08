@@ -284,7 +284,11 @@ colors:
   text-line: "#00ffff"
   text-tag: "#005fff"
   background-tag: "#0087ff"
+  text-header: "#ffffd7"
+  background-header: "#0087d7"
 ```
+
+* `text-header` / `background-header` style the section headers (e.g. `HOLDINGS` / `OPTIONS`) shown when a group mixes holdings and options
 
 * Terminals supporting TrueColor will be able to represent the full color space and in other cases colors will be down sampled
 * Any omitted or invalid colors will revert to default color scheme values

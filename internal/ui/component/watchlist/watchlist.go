@@ -214,18 +214,18 @@ func (m *Model) View() string {
 
 }
 
-// sectionHeading renders a bold uppercase label followed by a full-width rule,
+// sectionHeading renders a chip-style label followed by a full-width rule,
 // used to visually separate the holdings and options lists within a group.
 func (m *Model) sectionHeading(label string) string {
 
-	label = strings.ToUpper(label)
+	chip := " " + strings.ToUpper(label) + " "
 
-	ruleWidth := m.width - len(label) - 1
+	ruleWidth := m.width - len(chip) - 1
 	if ruleWidth < 0 {
 		ruleWidth = 0
 	}
 
-	return m.config.Styles.TextBold(label) + " " + m.config.Styles.TextLine(strings.Repeat("─", ruleWidth))
+	return m.config.Styles.TextHeader(chip) + " " + m.config.Styles.TextLine(strings.Repeat("─", ruleWidth))
 }
 
 func getCellWidths(assets []*c.Asset) row.CellWidthsContainer {
