@@ -187,11 +187,15 @@ When viewing options with `--show-fundamentals`:
 * **Strike Price** - The strike price of the option contract
 * **Breakeven** - Calculated breakeven price (strike + premium for calls, strike - premium for puts)
 * **Diff to Strike** - Current underlying price minus strike price
+* **Premium** - Premium paid per share (cost basis)
+* **Cur. Premium** - Current market premium per share (shown when available, e.g. from a broker)
+* **Status** - Whether the option is in, at, or out of the money (`ITM` / `ATM` / `OTM`)
 
 * `symbol` - Ticker symbol of the underlying asset
 * `strike_price` - Strike price of the option
 * `type` - Either `put` or `call`
 * `premium` - Premium paid per share
+* `current_premium` - (optional) Current market premium per share
 * `contracts` - Number of contracts
 * `expiration` - (optional) Expiration date (`YYYY-MM-DD`), shown in the row label to distinguish contracts
 

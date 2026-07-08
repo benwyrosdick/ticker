@@ -73,6 +73,7 @@ type UniversalSymbol struct {
 type OptionsPosition struct {
 	Symbol               *OptionBrokerageSymbol `json:"symbol"`
 	Units                float64                `json:"units"`
+	Price                float64                `json:"price"` // current market price per contract
 	AveragePurchasePrice float64                `json:"average_purchase_price"`
 }
 
@@ -335,9 +336,12 @@ func transformOptionPosition(position OptionsPosition) (c.Option, bool) {
 		Symbol:      optionSymbol.UnderlyingSymbol.Symbol,
 		StrikePrice: optionSymbol.StrikePrice,
 		Type:        strings.ToLower(optionSymbol.OptionType),
-		Premium:     position.AveragePurchasePrice / optionContractMultiplier,
-		Contracts:   position.Units,
-		Expiration:  optionSymbol.ExpirationDate,
+		// SnapTrade reports average_purchase_price per contract but the current
+		// price per share, so only the former is divided by the contract multiplier.
+		Premium:        position.AveragePurchasePrice / optionContractMultiplier,
+		CurrentPremium: position.Price,
+		Contracts:      position.Units,
+		Expiration:     optionSymbol.ExpirationDate,
 	}, true
 }
 

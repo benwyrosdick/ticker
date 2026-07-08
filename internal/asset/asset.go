@@ -290,6 +290,7 @@ func computeQuoteOption(option c.Option, underlyingPrice float64) c.QuoteOption 
 		BreakevenPrice: breakevenPrice,
 		Type:           option.Type,
 		Premium:        option.Premium,
+		CurrentPremium: option.CurrentPremium,
 		Contracts:      option.Contracts,
 		DiffToStrike:   underlyingPrice - option.StrikePrice,
 		Expiration:     option.Expiration,

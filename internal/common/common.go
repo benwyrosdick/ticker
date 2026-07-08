@@ -133,12 +133,13 @@ type Lot struct {
 
 // Option represents an option contract
 type Option struct {
-	Symbol      string  `yaml:"symbol"`
-	StrikePrice float64 `yaml:"strike_price"`
-	Type        string  `yaml:"type"` // "put" or "call"
-	Premium     float64 `yaml:"premium"`
-	Contracts   float64 `yaml:"contracts"`
-	Expiration  string  `yaml:"expiration"`
+	Symbol         string  `yaml:"symbol"`
+	StrikePrice    float64 `yaml:"strike_price"`
+	Type           string  `yaml:"type"` // "put" or "call"
+	Premium        float64 `yaml:"premium"`
+	CurrentPremium float64 `yaml:"current_premium"` // current market premium per share (optional; from broker)
+	Contracts      float64 `yaml:"contracts"`
+	Expiration     string  `yaml:"expiration"`
 }
 
 // type LotFixedProperties struct {
@@ -234,6 +235,7 @@ type QuoteOption struct {
 	BreakevenPrice float64
 	Type           string // "put" or "call"
 	Premium        float64
+	CurrentPremium float64
 	Contracts      float64
 	DiffToStrike   float64
 	Expiration     string

@@ -171,9 +171,11 @@ var _ = Describe("SnapTrade Client", func() {
 					Symbol: &OptionBrokerageSymbol{OptionSymbol: &OptionsSymbol{
 						OptionType:       "PUT",
 						StrikePrice:      255,
+						ExpirationDate:   "2026-07-10",
 						UnderlyingSymbol: &UnderlyingSymbol{Symbol: "AAPL"},
 					}},
 					Units:                1,
+					Price:                4.2,
 					AveragePurchasePrice: 270,
 				},
 			}
@@ -182,9 +184,9 @@ var _ = Describe("SnapTrade Client", func() {
 
 			Expect(group.Name).To(Equal("Robinhood"))
 			Expect(group.Holdings).To(Equal([]c.Lot{{Symbol: "NVDA", Quantity: 3, UnitCost: 4.42}}))
-			// average_purchase_price is per contract; ticker's premium is per share
+			// average_purchase_price is per contract (÷100); price is already per share
 			Expect(group.Options).To(Equal([]c.Option{
-				{Symbol: "AAPL", StrikePrice: 255, Type: "put", Premium: 2.7, Contracts: 1},
+				{Symbol: "AAPL", StrikePrice: 255, Type: "put", Premium: 2.7, CurrentPremium: 4.2, Contracts: 1, Expiration: "2026-07-10"},
 			}))
 		})
 

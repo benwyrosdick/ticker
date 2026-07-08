@@ -769,6 +769,29 @@ var _ = Describe("Watchlist", func() {
 			Expect(optionsHeadingIndex).To(BeNumerically("<", aaplIndex))
 		})
 
+		It("should render current premium and in/out-of-the-money status for options", func() {
+			m := NewModel(Config{Styles: stylesFixture, ExtraInfoFundamentals: true, Sort: "alpha"})
+			m, _ = m.Update(tea.WindowSizeMsg{Width: 300})
+			m, _ = m.Update(SetAssetsMsg([]c.Asset{
+				{
+					Symbol: "AAPL", Name: "PUT 255 07/10", Class: c.AssetClassOption,
+					QuotePrice: c.QuotePrice{Price: 250.0},
+					QuoteOption: c.QuoteOption{
+						StrikePrice: 255, BreakevenPrice: 252.3, Type: "put",
+						Premium: 2.7, CurrentPremium: 4.2, DiffToStrike: -5,
+					},
+					Exchange: c.Exchange{IsActive: true, IsRegularTradingSession: true},
+				},
+			}))
+
+			view := removeFormatting(m.View())
+
+			Expect(view).To(ContainSubstring("Cur. Premium:"))
+			Expect(view).To(ContainSubstring("Status:"))
+			Expect(view).To(ContainSubstring("4.20")) // current premium per share
+			Expect(view).To(ContainSubstring("ITM"))  // put with underlying below strike
+		})
+
 		It("should not render headings when the group has only holdings", func() {
 			m := NewModel(Config{Styles: stylesFixture, ShowHoldings: true, Sort: "alpha"})
 			m, _ = m.Update(tea.WindowSizeMsg{Width: 175})
