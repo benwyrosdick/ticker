@@ -203,12 +203,12 @@ type QuoteFutures struct {
 }
 
 type QuoteOption struct {
-	StrikePrice     float64
-	BreakevenPrice  float64
-	Type            string  // "put" or "call"
-	Premium         float64
-	Contracts       float64
-	DiffToStrike    float64
+	StrikePrice    float64
+	BreakevenPrice float64
+	Type           string // "put" or "call"
+	Premium        float64
+	Contracts      float64
+	DiffToStrike   float64
 }
 
 type Exchange struct {
@@ -276,7 +276,6 @@ type AssetQuote struct {
 	QuotePrice    QuotePrice
 	QuoteExtended QuoteExtended
 	QuoteFutures  QuoteFutures
-	QuoteOption   QuoteOption
 	QuoteSource   QuoteSource
 	Exchange      Exchange
 	Meta          Meta

@@ -380,10 +380,6 @@ func textPosition(asset *c.Asset, styles c.Styles) string {
 
 func textQuoteExtended(asset *c.Asset, styles c.Styles) string {
 
-	if asset.Class == c.AssetClassOption && asset.QuoteOption.StrikePrice == 0.0 {
-		return ""
-	}
-
 	if asset.Class == c.AssetClassOption {
 		return styles.Text(u.ConvertFloatToStringWithCommas(asset.QuoteOption.StrikePrice, asset.Meta.IsVariablePrecision)) +
 			"\n" +
@@ -412,10 +408,6 @@ func textQuoteExtended(asset *c.Asset, styles c.Styles) string {
 }
 
 func textQuoteExtendedLabels(asset *c.Asset, styles c.Styles) string {
-
-	if asset.Class == c.AssetClassOption && asset.QuoteOption.StrikePrice == 0.0 {
-		return ""
-	}
 
 	if asset.Class == c.AssetClassOption {
 		return styles.TextLabel("Strike Price:") +
@@ -469,12 +461,9 @@ func textPositionExtendedLabels(asset *c.Asset, styles c.Styles) string {
 func textQuoteRange(asset *c.Asset, styles c.Styles) string {
 
 	if asset.Class == c.AssetClassOption {
-		if asset.QuoteOption.StrikePrice != 0.0 {
-			return u.ConvertFloatToStringWithCommas(asset.QuoteOption.DiffToStrike, asset.Meta.IsVariablePrecision) +
-				"\n" +
-				u.ConvertFloatToStringWithCommas(asset.QuoteOption.Premium, asset.Meta.IsVariablePrecision)
-		}
-		return ""
+		return u.ConvertFloatToStringWithCommas(asset.QuoteOption.DiffToStrike, asset.Meta.IsVariablePrecision) +
+			"\n" +
+			u.ConvertFloatToStringWithCommas(asset.QuoteOption.Premium, asset.Meta.IsVariablePrecision)
 	}
 
 	if asset.Class == c.AssetClassFuturesContract {
@@ -508,12 +497,9 @@ func textQuoteRange(asset *c.Asset, styles c.Styles) string {
 func textQuoteRangeLabels(asset *c.Asset, styles c.Styles) string {
 
 	if asset.Class == c.AssetClassOption {
-		if asset.QuoteOption.StrikePrice != 0.0 {
-			return styles.TextLabel("Diff to Strike:") +
-				"\n" +
-				styles.TextLabel("Premium:")
-		}
-		return ""
+		return styles.TextLabel("Diff to Strike:") +
+			"\n" +
+			styles.TextLabel("Premium:")
 	}
 
 	if asset.Class == c.AssetClassFuturesContract {

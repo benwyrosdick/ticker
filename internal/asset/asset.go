@@ -58,11 +58,10 @@ func GetAssets(ctx c.Context, assetGroupQuote c.AssetGroupQuote) ([]c.Asset, Hol
 		holding := getHoldingFromAssetQuote(assetQuote, holdingsBySymbol, currencyRateByUse)
 		holdingSummary = addHoldingToHoldingSummary(holdingSummary, holding, currencyRateByUse)
 
-		quoteOption := getOptionFromAssetQuote(assetQuote, optionsBySymbol)
+		quoteOption, isOption := getOptionFromAssetQuote(assetQuote, optionsBySymbol)
 
-		// Determine asset class - use AssetClassOption if we have option data
 		assetClass := assetQuote.Class
-		if quoteOption.StrikePrice != 0.0 {
+		if isOption {
 			assetClass = c.AssetClassOption
 		}
 
@@ -203,10 +202,6 @@ func getLots(lots []c.Lot) map[string]AggregatedLot {
 
 func getOptions(options []c.Option) map[string]c.Option {
 
-	if options == nil {
-		return map[string]c.Option{}
-	}
-
 	optionsBySymbol := map[string]c.Option{}
 
 	for _, option := range options {
@@ -216,31 +211,30 @@ func getOptions(options []c.Option) map[string]c.Option {
 	return optionsBySymbol
 }
 
-func getOptionFromAssetQuote(assetQuote c.AssetQuote, optionsBySymbol map[string]c.Option) c.QuoteOption {
+func getOptionFromAssetQuote(assetQuote c.AssetQuote, optionsBySymbol map[string]c.Option) (c.QuoteOption, bool) {
 
-	if option, ok := optionsBySymbol[assetQuote.Symbol]; ok {
-		// Calculate breakeven price
-		// For a call: breakeven = strike + premium
-		// For a put: breakeven = strike - premium
-		breakevenPrice := option.StrikePrice
-		if strings.ToLower(option.Type) == "call" {
-			breakevenPrice = option.StrikePrice + option.Premium
-		} else if strings.ToLower(option.Type) == "put" {
-			breakevenPrice = option.StrikePrice - option.Premium
-		}
-
-		// Calculate difference to strike price (current price - strike price)
-		diffToStrike := assetQuote.QuotePrice.Price - option.StrikePrice
-
-		return c.QuoteOption{
-			StrikePrice:    option.StrikePrice,
-			BreakevenPrice: breakevenPrice,
-			Type:           option.Type,
-			Premium:        option.Premium,
-			Contracts:      option.Contracts,
-			DiffToStrike:   diffToStrike,
-		}
+	option, ok := optionsBySymbol[assetQuote.Symbol]
+	if !ok {
+		return c.QuoteOption{}, false
 	}
 
-	return c.QuoteOption{}
+	// Calculate breakeven price
+	// For a call: breakeven = strike + premium
+	// For a put: breakeven = strike - premium
+	breakevenPrice := option.StrikePrice
+	switch strings.ToLower(option.Type) {
+	case "call":
+		breakevenPrice = option.StrikePrice + option.Premium
+	case "put":
+		breakevenPrice = option.StrikePrice - option.Premium
+	}
+
+	return c.QuoteOption{
+		StrikePrice:    option.StrikePrice,
+		BreakevenPrice: breakevenPrice,
+		Type:           option.Type,
+		Premium:        option.Premium,
+		Contracts:      option.Contracts,
+		DiffToStrike:   assetQuote.QuotePrice.Price - option.StrikePrice,
+	}, true
 }
