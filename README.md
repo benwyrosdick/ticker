@@ -224,6 +224,8 @@ ticker snaptrade connect
 
 This opens a SnapTrade connection portal in your browser where you log into your brokerage and authorize read-only access. (Commercial keys additionally register a user and store the resulting secret locally under your XDG data directory.) After connecting, run `ticker` and your accounts appear as groups — switch between them with `⭾` and press `r` to re-fetch holdings on demand.
 
+Each account's equity holdings appear as one group; any options in that account appear as a separate `<account> Options` group (so option overlays don't collide with stock holdings on the same underlying). Options are displayed against their underlying's live price — strike, breakeven, premium, and difference to strike are shown with `--show-fundamentals`.
+
 * `client-id` - Your SnapTrade client ID
 * `consumer-key` - Your SnapTrade consumer key (secret)
 * `account-type` - `personal` (default) or `commercial`; inferred as commercial when a `user-id` is set

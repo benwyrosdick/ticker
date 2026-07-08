@@ -103,7 +103,7 @@ var _ = Describe("SnapTrade", func() {
 								UnderlyingSymbol: &snaptrade.UnderlyingSymbol{Symbol: "AAPL"},
 							}},
 							Units:                2,
-							AveragePurchasePrice: 2.7,
+							AveragePurchasePrice: 270,
 						},
 					}),
 				)

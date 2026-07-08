@@ -171,7 +171,7 @@ var _ = Describe("SnapTrade Client", func() {
 						UnderlyingSymbol: &UnderlyingSymbol{Symbol: "AAPL"},
 					}},
 					Units:                1,
-					AveragePurchasePrice: 2.7,
+					AveragePurchasePrice: 270,
 				},
 			}
 
@@ -179,6 +179,7 @@ var _ = Describe("SnapTrade Client", func() {
 
 			Expect(ok).To(BeTrue())
 			Expect(group.Name).To(Equal("Robinhood Options"))
+			// average_purchase_price is per contract; ticker's premium is per share
 			Expect(group.Options).To(Equal([]c.Option{
 				{Symbol: "AAPL", StrikePrice: 255, Type: "put", Premium: 2.7, Contracts: 1},
 			}))

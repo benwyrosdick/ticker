@@ -19,6 +19,11 @@ import (
 	c "github.com/achannarasappa/ticker/v5/internal/common"
 )
 
+// optionContractMultiplier is the standard number of shares per US equity option
+// contract. SnapTrade reports option average_purchase_price per contract, so we
+// divide by this to get the per-share premium ticker's breakeven math expects.
+const optionContractMultiplier = 100
+
 // Client is a minimal SnapTrade API client. It mirrors the request signing
 // performed by the official SnapTrade SDKs: an HMAC-SHA256 over a canonical
 // JSON object of {content, path, query}, base64-encoded into a Signature header.
@@ -344,7 +349,7 @@ func transformOptionPosition(position OptionsPosition) (c.Option, bool) {
 		Symbol:      optionSymbol.UnderlyingSymbol.Symbol,
 		StrikePrice: optionSymbol.StrikePrice,
 		Type:        strings.ToLower(optionSymbol.OptionType),
-		Premium:     position.AveragePurchasePrice,
+		Premium:     position.AveragePurchasePrice / optionContractMultiplier,
 		Contracts:   position.Units,
 	}, true
 }
