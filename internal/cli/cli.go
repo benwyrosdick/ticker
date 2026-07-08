@@ -184,28 +184,39 @@ func GetConfig(dep c.Dependencies, configPath string, options Options) (c.Config
 }
 
 func getConfigPath(fs afero.Fs, configPathOption string) (string, error) {
-	var err error
 	if configPathOption != "" {
 		return configPathOption, nil
 	}
 
 	home, _ := homedir.Dir()
 
-	v := viper.New()
-	v.SetFs(fs)
-	v.SetConfigType("yaml")
-	v.AddConfigPath(home)
-	v.AddConfigPath(".")
-	v.AddConfigPath(xdg.ConfigHome)
-	v.AddConfigPath(xdg.ConfigHome + "/ticker")
-	v.SetConfigName(".ticker")
-	err = v.ReadInConfig()
-
-	if err != nil {
-		return "", fmt.Errorf("invalid config: %w", err)
+	// Search the current (XDG) location first, then the legacy locations for
+	// backward compatibility. The primary default is ~/.config/ticker/config.yaml.
+	searches := []struct {
+		name  string
+		paths []string
+	}{
+		{name: "config", paths: []string{xdg.ConfigHome + "/ticker"}},
+		{name: ".ticker", paths: []string{home, ".", xdg.ConfigHome, xdg.ConfigHome + "/ticker"}},
 	}
 
-	return v.ConfigFileUsed(), nil
+	var err error
+
+	for _, search := range searches {
+		v := viper.New()
+		v.SetFs(fs)
+		v.SetConfigType("yaml")
+		for _, path := range search.paths {
+			v.AddConfigPath(path)
+		}
+		v.SetConfigName(search.name)
+
+		if err = v.ReadInConfig(); err == nil {
+			return v.ConfigFileUsed(), nil
+		}
+	}
+
+	return "", fmt.Errorf("invalid config: %w", err)
 }
 
 func getRefreshInterval(optionsRefreshInterval int, configRefreshInterval int) int {

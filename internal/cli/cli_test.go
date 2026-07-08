@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/adrg/xdg"
 	"github.com/mitchellh/go-homedir"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -470,6 +471,18 @@ var _ = Describe("Cli", func() {
 
 						Expect(outputErr).To(BeNil())
 						Expect(outputConfig).To(Equal(c.Config{RefreshInterval: 5}))
+					})
+				})
+				When("there is a config file in the XDG ticker directory", func() {
+					It("should read config.yaml from the primary location", func() {
+						inputConfigPath := ""
+						configDir := xdg.ConfigHome + "/ticker"
+						depLocal.Fs.MkdirAll(configDir, 0755)
+						afero.WriteFile(depLocal.Fs, configDir+"/config.yaml", []byte("watchlist:\n  - PLTR"), 0644)
+						outputConfig, outputErr := GetConfig(depLocal, inputConfigPath, cli.Options{})
+
+						Expect(outputConfig.Watchlist).To(Equal([]string{"PLTR"}))
+						Expect(outputErr).To(BeNil())
 					})
 				})
 				When("there is a config file in the home directory", func() {

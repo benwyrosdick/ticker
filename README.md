@@ -77,7 +77,7 @@ ticker -w NET,AAPL,TSLA
 ## Usage
 |Option Name|Alias|Flag|Default|Description|
 |-------------------|--|-------------------|----------------|-------------------------------------------------|
-|                   |  |--config           |`~/.ticker.yaml`|config file location with watchlist and positions|
+|                   |  |--config           |`~/.config/ticker/config.yaml`|config file location with watchlist and positions|
 |`interval`         |-i|--interval         |`5`             |Refresh interval in seconds|
 |`watchlist`        |-w|--watchlist        |                |comma separated list of symbols to watch|
 |`show-tags`        |  |--show-tags        |                |display currency, exchange name, and quote delay for each quote |
@@ -94,7 +94,7 @@ ticker -w NET,AAPL,TSLA
 Configuration is not required to watch stock price but is helpful when always watching the same stocks. Configuration can also be used to set cost basis lots which will in turn be used to show total gain or loss on any position.
 
 ```yaml
-# ~/.ticker.yaml
+# ~/.config/ticker/config.yaml
 show-summary: true
 show-tags: true
 show-fundamentals: true
@@ -132,10 +132,10 @@ groups:
         unit_cost: 159.10
 ```
 
-* All properties in `.ticker.yaml` are optional
+* All properties in the config file are optional
 * Symbols not on the watchlist that exists in `lots` are implicitly added to the watchlist
 * To add multiple cost basis lots (`quantity`, `unit_cost`) for the same `symbol`, include two ore more entries - see `ARKW` example above
-* `.ticker.yaml` can be set in user home directory, the current directory, or [XDG config home](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html)
+* The default config location is `~/.config/ticker/config.yaml` (i.e. `config.yaml` under [XDG config home](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html)/`ticker`). For backward compatibility, a legacy `.ticker.yaml` in the user home directory, the current directory, or XDG config home is also still read if present.
 
 ### Display Options
 
@@ -263,7 +263,7 @@ Note: Coincap (`.CC`) and CoinGecko (`.CG`) are no longer supported after v5.0.0
 `ticker` supports setting custom color schemes from the config file. Colors are represented by a [hex triplet](https://en.wikipedia.org/wiki/Web_colors#Hex_triplet). Below is an annotated example config block from `.ticker.yaml` where custom colors are set:
 
 ```yaml
-# ~/.ticker.yaml
+# ~/.config/ticker/config.yaml
 watchlist:
   - NET
   - TEAM
