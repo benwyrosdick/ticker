@@ -7,6 +7,7 @@ import (
 
 	grid "github.com/achannarasappa/term-grid"
 	"github.com/achannarasappa/ticker/v5/internal/asset"
+	"github.com/achannarasappa/ticker/v5/internal/cli"
 	c "github.com/achannarasappa/ticker/v5/internal/common"
 	mon "github.com/achannarasappa/ticker/v5/internal/monitor"
 	"github.com/achannarasappa/ticker/v5/internal/ui/component/summary"
@@ -33,6 +34,7 @@ const (
 // Model for UI
 type Model struct {
 	ctx                c.Context
+	dep                c.Dependencies
 	ready              bool
 	headerHeight       int
 	versionVector      int
@@ -68,6 +70,10 @@ type SetAssetGroupQuoteMsg struct {
 	versionVector   int
 }
 
+type snapTradeRefreshedMsg struct {
+	groups []c.AssetGroup
+}
+
 // NewModel is the constructor for UI model
 func NewModel(dep c.Dependencies, ctx c.Context, monitors *mon.Monitor) *Model {
 
@@ -75,6 +81,7 @@ func NewModel(dep c.Dependencies, ctx c.Context, monitors *mon.Monitor) *Model {
 
 	return &Model{
 		ctx:               ctx,
+		dep:               dep,
 		headerHeight:      getVerticalMargin(ctx.Config),
 		ready:             false,
 		requestInterval:   ctx.Config.RefreshInterval,
@@ -195,6 +202,26 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			return m, cmd
 
+		case "r":
+
+			// Re-fetch SnapTrade holdings on demand. No-op when SnapTrade is not configured.
+			if m.ctx.Config.SnapTrade.ClientID == "" {
+				return m, nil
+			}
+
+			return m, func() tea.Msg {
+				groups, err := cli.RefreshSnapTradeGroups(m.dep, m.ctx.Config)
+				if err != nil {
+					if m.ctx.Config.Debug && m.ctx.Logger != nil {
+						m.ctx.Logger.Println(err)
+					}
+
+					return nil
+				}
+
+				return snapTradeRefreshedMsg{groups: groups}
+			}
+
 		}
 
 	case tea.WindowSizeMsg:
@@ -276,6 +303,38 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.groupSelectedName = m.ctx.Groups[m.groupSelectedIndex].Name
 
 		return m, nil
+
+	case snapTradeRefreshedMsg:
+
+		m.mu.Lock()
+
+		// Preserve config-derived groups, swap in the freshly fetched SnapTrade groups
+		baseGroups := make([]c.AssetGroup, 0, len(m.ctx.Groups))
+		for _, group := range m.ctx.Groups {
+			if !group.IsSnapTrade {
+				baseGroups = append(baseGroups, group)
+			}
+		}
+
+		m.ctx.Groups = append(baseGroups, msg.groups...)
+		m.groupMaxIndex = len(m.ctx.Groups) - 1
+
+		if m.groupSelectedIndex > m.groupMaxIndex {
+			m.groupSelectedIndex = m.groupMaxIndex
+		}
+
+		// Invalidate in-flight quotes, matching the group-switch path
+		m.versionVector++
+
+		m.mu.Unlock()
+
+		if m.groupMaxIndex < 0 {
+			return m, nil
+		}
+
+		m.monitors.SetAssetGroup(m.ctx.Groups[m.groupSelectedIndex], m.versionVector) //nolint:errcheck
+
+		return m, tickImmediate(m.versionVector)
 
 	case SetAssetQuoteMsg:
 
@@ -373,7 +432,7 @@ func footer(width int, time string, groupSelectedName string, currentSort string
 		sortDisplayName = "user"
 	}
 
-	helpText := " q: exit ↑: scroll up ↓: scroll down s: change sort (" + sortDisplayName + ") ⭾: change group"
+	helpText := " q: exit ↑: scroll up ↓: scroll down s: change sort (" + sortDisplayName + ") r: refresh holdings ⭾: change group"
 
 	return grid.Render(grid.Grid{
 		Rows: []grid.Row{

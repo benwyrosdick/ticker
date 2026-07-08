@@ -2,6 +2,7 @@ package common
 
 import (
 	"log"
+	"strings"
 
 	"github.com/spf13/afero"
 )
@@ -30,7 +31,29 @@ type Config struct {
 	CurrencyDisableUnitCostConversion bool               `yaml:"currency-disable-unit-cost-conversion"`
 	ColorScheme                       ConfigColorScheme  `yaml:"colors"`
 	AssetGroup                        []ConfigAssetGroup `yaml:"groups"`
+	SnapTrade                         ConfigSnapTrade    `yaml:"snaptrade"`
 	Debug                             bool               `yaml:"debug"`
+}
+
+// ConfigSnapTrade represents SnapTrade credentials used to pull live brokerage holdings.
+// Personal keys (a single self-serve user) need only ClientID + ConsumerKey. Commercial
+// keys additionally register and identify users via UserID.
+type ConfigSnapTrade struct {
+	ClientID    string `yaml:"client-id"`
+	ConsumerKey string `yaml:"consumer-key"` // secret
+	AccountType string `yaml:"account-type"` // "personal" or "commercial"; inferred from UserID when empty
+	UserID      string `yaml:"user-id"`      // commercial only: partner-chosen user identifier, e.g. an email
+}
+
+// IsPersonal reports whether these are personal SnapTrade keys (the client ID and
+// consumer key identify a single user, so no registration or user ID is needed).
+// An explicit AccountType wins; otherwise the absence of a UserID implies personal.
+func (st ConfigSnapTrade) IsPersonal() bool {
+	if st.AccountType != "" {
+		return strings.EqualFold(st.AccountType, "personal")
+	}
+
+	return st.UserID == ""
 }
 
 // ConfigColorScheme represents user defined color scheme
@@ -53,6 +76,8 @@ type ConfigAssetGroup struct {
 type AssetGroup struct {
 	ConfigAssetGroup
 	SymbolsBySource []AssetGroupSymbolsBySource
+	// IsSnapTrade marks groups derived from a SnapTrade brokerage account (built at runtime, not from config)
+	IsSnapTrade bool
 }
 
 type AssetGroupSymbolsBySource struct {
@@ -80,6 +105,7 @@ type Dependencies struct {
 	MonitorYahooSessionRootURL       string
 	MonitorYahooSessionCrumbURL      string
 	MonitorYahooSessionConsentURL    string
+	SnapTradeBaseURL                 string
 }
 
 type Monitor interface {

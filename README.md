@@ -192,6 +192,46 @@ When viewing options with `--show-fundamentals`:
 * `contracts` - Number of contracts
 
 
+### Live Brokerage Holdings (SnapTrade)
+
+`ticker` can pull live holdings directly from a connected brokerage (e.g. Robinhood) using [SnapTrade](https://snaptrade.com). Each connected account is shown as its own group (tab). Quantity and cost basis come from the brokerage; prices are quoted live from the normal data sources.
+
+You need SnapTrade API credentials (`clientId` and `consumerKey`), available from the [SnapTrade dashboard](https://dashboard.snaptrade.com/signup). Both **personal** and **commercial** keys are supported.
+
+**Personal keys** (individual self-serve accounts) identify a single user by the credentials themselves — that's all you need:
+
+```yaml
+snaptrade:
+  client-id: YOUR_SNAPTRADE_CLIENT_ID
+  consumer-key: YOUR_SNAPTRADE_CONSUMER_KEY
+```
+
+**Commercial keys** register and identify users, so add a `user-id`:
+
+```yaml
+snaptrade:
+  client-id: YOUR_SNAPTRADE_CLIENT_ID
+  consumer-key: YOUR_SNAPTRADE_CONSUMER_KEY
+  account-type: commercial
+  user-id: your-identifier # any stable identifier you choose, e.g. your email
+```
+
+Then connect a brokerage once:
+
+```sh
+ticker snaptrade connect
+```
+
+This opens a SnapTrade connection portal in your browser where you log into your brokerage and authorize read-only access. (Commercial keys additionally register a user and store the resulting secret locally under your XDG data directory.) After connecting, run `ticker` and your accounts appear as groups — switch between them with `⭾` and press `r` to re-fetch holdings on demand.
+
+* `client-id` - Your SnapTrade client ID
+* `consumer-key` - Your SnapTrade consumer key (secret)
+* `account-type` - `personal` (default) or `commercial`; inferred as commercial when a `user-id` is set
+* `user-id` - Commercial keys only: a stable identifier you choose for your SnapTrade user
+
+If SnapTrade is unreachable or not connected, `ticker` starts normally without the brokerage groups.
+
+
 ### Data Sources & Symbols
 
 `ticker` pulls market data from a few different sources with Yahoo Finance as the default. Symbols for non default data sources follow the format `<symbol>.<source>` where `<symbol>` is the canonical symbol within that data source and `<source>` is the data source specifier. Below is a list of the supported data sources and their specifiers:

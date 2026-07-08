@@ -72,7 +72,11 @@ func init() { //nolint: gochecknoinits
 	printCmd.PersistentFlags().StringVar(&configPath, "config", "", "config file (default is $HOME/.ticker.yaml)")
 	printCmd.AddCommand(summaryCmd)
 
+	snaptradeCmd.PersistentFlags().StringVar(&configPath, "config", "", "config file (default is $HOME/.ticker.yaml)")
+	snaptradeCmd.AddCommand(snaptradeConnectCmd)
+
 	rootCmd.AddCommand(printCmd)
+	rootCmd.AddCommand(snaptradeCmd)
 }
 
 func initConfig() {

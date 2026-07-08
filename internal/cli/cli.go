@@ -56,7 +56,7 @@ func Validate(config *c.Config, options *Options, prevErr *error) func(*cobra.Co
 			return *prevErr
 		}
 
-		if len(config.Watchlist) == 0 && len(options.Watchlist) == 0 && len(config.Lots) == 0 && len(config.AssetGroup) == 0 {
+		if len(config.Watchlist) == 0 && len(options.Watchlist) == 0 && len(config.Lots) == 0 && len(config.AssetGroup) == 0 && config.SnapTrade.ClientID == "" {
 			return errors.New("invalid config: No watchlist provided") //nolint:goerr113
 		}
 
@@ -74,6 +74,7 @@ func GetDependencies() c.Dependencies {
 		MonitorYahooSessionConsentURL:    "https://consent.yahoo.com",
 		MonitorPriceCoinbaseBaseURL:      "https://api.coinbase.com",
 		MonitorPriceCoinbaseStreamingURL: "wss://ws-feed.exchange.coinbase.com",
+		SnapTradeBaseURL:                 "https://api.snaptrade.com/api/v1",
 	}
 }
 
@@ -85,15 +86,14 @@ func GetContext(d c.Dependencies, config c.Config) (c.Context, error) {
 		err       error
 	)
 
-	if err != nil {
-		return c.Context{}, err
-	}
-
-	groups, err = getGroups(config, d)
+	tickerSymbolToSourceSymbol, err := symbol.GetTickerSymbols(d.SymbolsURL)
 
 	if err != nil {
 		return c.Context{}, err
 	}
+
+	groups = getGroups(config, tickerSymbolToSourceSymbol)
+	groups = append(groups, buildSnapTradeGroups(d, config, tickerSymbolToSourceSymbol)...)
 
 	reference, err = getReference(config, groups)
 
@@ -247,16 +247,10 @@ func getStringOption(cliValue string, configValue string) string {
 	return ""
 }
 
-func getGroups(config c.Config, d c.Dependencies) ([]c.AssetGroup, error) {
+func getGroups(config c.Config, tickerSymbolToSourceSymbol symbol.TickerSymbolToSourceSymbol) []c.AssetGroup {
 
 	groups := make([]c.AssetGroup, 0)
 	var configAssetGroups []c.ConfigAssetGroup
-
-	tickerSymbolToSourceSymbol, err := symbol.GetTickerSymbols(d.SymbolsURL)
-
-	if err != nil {
-		return []c.AssetGroup{}, err
-	}
 
 	if len(config.Watchlist) > 0 || len(config.Lots) > 0 {
 		configAssetGroups = append(configAssetGroups, c.ConfigAssetGroup{
@@ -269,48 +263,48 @@ func getGroups(config c.Config, d c.Dependencies) ([]c.AssetGroup, error) {
 	configAssetGroups = append(configAssetGroups, config.AssetGroup...)
 
 	for _, configAssetGroup := range configAssetGroups {
-
-		symbols := make(map[string]bool)
-		symbolsUnique := make(map[c.QuoteSource]c.AssetGroupSymbolsBySource)
-		var assetGroupSymbolsBySource []c.AssetGroupSymbolsBySource
-
-		for _, symbol := range configAssetGroup.Watchlist {
-			if !symbols[symbol] {
-				symbols[symbol] = true
-				symbolAndSource := getSymbolAndSource(symbol, tickerSymbolToSourceSymbol)
-				symbolsUnique = appendSymbol(symbolsUnique, symbolAndSource)
-			}
-		}
-
-		for _, lot := range configAssetGroup.Holdings {
-			if !symbols[lot.Symbol] {
-				symbols[lot.Symbol] = true
-				symbolAndSource := getSymbolAndSource(lot.Symbol, tickerSymbolToSourceSymbol)
-				symbolsUnique = appendSymbol(symbolsUnique, symbolAndSource)
-			}
-		}
-
-		for _, option := range configAssetGroup.Options {
-			if !symbols[option.Symbol] {
-				symbols[option.Symbol] = true
-				symbolAndSource := getSymbolAndSource(option.Symbol, tickerSymbolToSourceSymbol)
-				symbolsUnique = appendSymbol(symbolsUnique, symbolAndSource)
-			}
-		}
-
-		for _, symbolsBySource := range symbolsUnique {
-			assetGroupSymbolsBySource = append(assetGroupSymbolsBySource, symbolsBySource)
-		}
-
-		groups = append(groups, c.AssetGroup{
-			ConfigAssetGroup: configAssetGroup,
-			SymbolsBySource:  assetGroupSymbolsBySource,
-		})
-
+		groups = append(groups, buildAssetGroup(configAssetGroup, tickerSymbolToSourceSymbol))
 	}
 
-	return groups, nil
+	return groups
 
+}
+
+// buildAssetGroup resolves each symbol in a config group to its quote source,
+// producing a runtime AssetGroup. Shared by config-derived groups and SnapTrade groups.
+func buildAssetGroup(configAssetGroup c.ConfigAssetGroup, tickerSymbolToSourceSymbol symbol.TickerSymbolToSourceSymbol) c.AssetGroup {
+
+	symbols := make(map[string]bool)
+	symbolsUnique := make(map[c.QuoteSource]c.AssetGroupSymbolsBySource)
+	var assetGroupSymbolsBySource []c.AssetGroupSymbolsBySource
+
+	appendUnique := func(sym string) {
+		if !symbols[sym] {
+			symbols[sym] = true
+			symbolsUnique = appendSymbol(symbolsUnique, getSymbolAndSource(sym, tickerSymbolToSourceSymbol))
+		}
+	}
+
+	for _, sym := range configAssetGroup.Watchlist {
+		appendUnique(sym)
+	}
+
+	for _, lot := range configAssetGroup.Holdings {
+		appendUnique(lot.Symbol)
+	}
+
+	for _, option := range configAssetGroup.Options {
+		appendUnique(option.Symbol)
+	}
+
+	for _, symbolsBySource := range symbolsUnique {
+		assetGroupSymbolsBySource = append(assetGroupSymbolsBySource, symbolsBySource)
+	}
+
+	return c.AssetGroup{
+		ConfigAssetGroup: configAssetGroup,
+		SymbolsBySource:  assetGroupSymbolsBySource,
+	}
 }
 
 func getLogger(d c.Dependencies) (*log.Logger, error) {
