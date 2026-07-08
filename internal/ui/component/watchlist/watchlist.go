@@ -198,10 +198,11 @@ func (m *Model) View() string {
 
 	// When a group mixes holdings and options, render them as separate labeled lists.
 	if len(holdingsRows) > 0 && len(optionsRows) > 0 {
-		sections := make([]string, 0, len(m.rows)+2)
-		sections = append(sections, m.config.Styles.TextBold("Holdings"))
+		sections := make([]string, 0, len(m.rows)+3)
+		sections = append(sections, m.sectionHeading("Holdings"))
 		sections = append(sections, holdingsRows...)
-		sections = append(sections, m.config.Styles.TextBold("Options"))
+		sections = append(sections, "")
+		sections = append(sections, m.sectionHeading("Options"))
 		sections = append(sections, optionsRows...)
 
 		return strings.Join(sections, "\n")
@@ -212,6 +213,21 @@ func (m *Model) View() string {
 	return strings.Join(rows, "\n")
 
 }
+
+// sectionHeading renders a bold uppercase label followed by a full-width rule,
+// used to visually separate the holdings and options lists within a group.
+func (m *Model) sectionHeading(label string) string {
+
+	label = strings.ToUpper(label)
+
+	ruleWidth := m.width - len(label) - 1
+	if ruleWidth < 0 {
+		ruleWidth = 0
+	}
+
+	return m.config.Styles.TextBold(label) + " " + m.config.Styles.TextLine(strings.Repeat("─", ruleWidth))
+}
+
 func getCellWidths(assets []*c.Asset) row.CellWidthsContainer {
 
 	cellMaxWidths := row.CellWidthsContainer{}

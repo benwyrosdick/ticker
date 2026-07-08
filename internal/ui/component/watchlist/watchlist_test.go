@@ -754,13 +754,15 @@ var _ = Describe("Watchlist", func() {
 
 			view := removeFormatting(m.View())
 
-			holdingsHeadingIndex := strings.Index(view, "Holdings")
-			optionsHeadingIndex := strings.Index(view, "Options")
+			holdingsHeadingIndex := strings.Index(view, "HOLDINGS")
+			optionsHeadingIndex := strings.Index(view, "OPTIONS")
 			msftIndex := strings.Index(view, "MSFT")
 			aaplIndex := strings.Index(view, "AAPL")
 
 			Expect(holdingsHeadingIndex).To(BeNumerically(">=", 0))
 			Expect(optionsHeadingIndex).To(BeNumerically(">=", 0))
+			// Heading includes a divider rule
+			Expect(view).To(ContainSubstring("─"))
 			// Holdings heading, then MSFT, then Options heading, then AAPL
 			Expect(holdingsHeadingIndex).To(BeNumerically("<", msftIndex))
 			Expect(msftIndex).To(BeNumerically("<", optionsHeadingIndex))
@@ -781,8 +783,8 @@ var _ = Describe("Watchlist", func() {
 
 			view := removeFormatting(m.View())
 
-			Expect(view).NotTo(ContainSubstring("Holdings"))
-			Expect(view).NotTo(ContainSubstring("Options"))
+			Expect(view).NotTo(ContainSubstring("HOLDINGS"))
+			Expect(view).NotTo(ContainSubstring("OPTIONS"))
 		})
 	})
 })
