@@ -24,13 +24,14 @@ func getLine(text string, lineIndex int) string {
 var _ = Describe("Watchlist", func() {
 
 	stylesFixture := c.Styles{
-		Text:      func(v string) string { return v },
-		TextLight: func(v string) string { return v },
-		TextLabel: func(v string) string { return v },
-		TextBold:  func(v string) string { return v },
-		TextLine:  func(v string) string { return v },
-		TextPrice: func(percent float64, text string) string { return text },
-		Tag:       func(v string) string { return v },
+		Text:       func(v string) string { return v },
+		TextLight:  func(v string) string { return v },
+		TextLabel:  func(v string) string { return v },
+		TextBold:   func(v string) string { return v },
+		TextLine:   func(v string) string { return v },
+		TextHeader: func(v string) string { return v },
+		TextPrice:  func(percent float64, text string) string { return text },
+		Tag:        func(v string) string { return v },
 	}
 
 	It("should render a watchlist", func() {
@@ -725,6 +726,89 @@ var _ = Describe("Watchlist", func() {
 			googIndex = strings.Index(view, "GOOG")
 			Expect(btcIndex).To(BeNumerically("<", aaplIndex))
 			Expect(aaplIndex).To(BeNumerically("<", googIndex))
+		})
+	})
+
+	Describe("when a group mixes holdings and options", func() {
+		It("should render Holdings and Options as separate labeled lists", func() {
+			m := NewModel(Config{
+				Styles:                stylesFixture,
+				ShowHoldings:          true,
+				ExtraInfoFundamentals: true,
+				Sort:                  "alpha",
+			})
+			m, _ = m.Update(tea.WindowSizeMsg{Width: 175})
+			m, _ = m.Update(SetAssetsMsg([]c.Asset{
+				{
+					Symbol: "MSFT", Name: "Microsoft", Class: c.AssetClassStock,
+					QuotePrice: c.QuotePrice{Price: 400.0},
+					Holding:    c.Holding{Quantity: 10, Value: 4000, UnitCost: 300},
+					Exchange:   c.Exchange{IsActive: true, IsRegularTradingSession: true},
+				},
+				{
+					Symbol: "AAPL", Name: "Apple", Class: c.AssetClassOption,
+					QuotePrice:  c.QuotePrice{Price: 250.0},
+					QuoteOption: c.QuoteOption{StrikePrice: 255, BreakevenPrice: 252.3, Type: "put", Premium: 2.7, DiffToStrike: -5},
+					Exchange:    c.Exchange{IsActive: true, IsRegularTradingSession: true},
+				},
+			}))
+
+			view := removeFormatting(m.View())
+
+			holdingsHeadingIndex := strings.Index(view, "HOLDINGS")
+			optionsHeadingIndex := strings.Index(view, "OPTIONS")
+			msftIndex := strings.Index(view, "MSFT")
+			aaplIndex := strings.Index(view, "AAPL")
+
+			Expect(holdingsHeadingIndex).To(BeNumerically(">=", 0))
+			Expect(optionsHeadingIndex).To(BeNumerically(">=", 0))
+			// Heading includes a divider rule
+			Expect(view).To(ContainSubstring("─"))
+			// Holdings heading, then MSFT, then Options heading, then AAPL
+			Expect(holdingsHeadingIndex).To(BeNumerically("<", msftIndex))
+			Expect(msftIndex).To(BeNumerically("<", optionsHeadingIndex))
+			Expect(optionsHeadingIndex).To(BeNumerically("<", aaplIndex))
+		})
+
+		It("should render current premium and in/out-of-the-money status for options", func() {
+			m := NewModel(Config{Styles: stylesFixture, ExtraInfoFundamentals: true, Sort: "alpha"})
+			m, _ = m.Update(tea.WindowSizeMsg{Width: 300})
+			m, _ = m.Update(SetAssetsMsg([]c.Asset{
+				{
+					Symbol: "AAPL", Name: "PUT 255 07/10", Class: c.AssetClassOption,
+					QuotePrice: c.QuotePrice{Price: 250.0},
+					QuoteOption: c.QuoteOption{
+						StrikePrice: 255, BreakevenPrice: 252.3, Type: "put",
+						Premium: 2.7, CurrentPremium: 4.2, DiffToStrike: -5,
+					},
+					Exchange: c.Exchange{IsActive: true, IsRegularTradingSession: true},
+				},
+			}))
+
+			view := removeFormatting(m.View())
+
+			Expect(view).To(ContainSubstring("Cur. Premium:"))
+			Expect(view).To(ContainSubstring("Status:"))
+			Expect(view).To(ContainSubstring("4.20")) // current premium per share
+			Expect(view).To(ContainSubstring("ITM"))  // put with underlying below strike
+		})
+
+		It("should not render headings when the group has only holdings", func() {
+			m := NewModel(Config{Styles: stylesFixture, ShowHoldings: true, Sort: "alpha"})
+			m, _ = m.Update(tea.WindowSizeMsg{Width: 175})
+			m, _ = m.Update(SetAssetsMsg([]c.Asset{
+				{
+					Symbol: "MSFT", Name: "Microsoft", Class: c.AssetClassStock,
+					QuotePrice: c.QuotePrice{Price: 400.0},
+					Holding:    c.Holding{Quantity: 10, Value: 4000, UnitCost: 300},
+					Exchange:   c.Exchange{IsActive: true, IsRegularTradingSession: true},
+				},
+			}))
+
+			view := removeFormatting(m.View())
+
+			Expect(view).NotTo(ContainSubstring("HOLDINGS"))
+			Expect(view).NotTo(ContainSubstring("OPTIONS"))
 		})
 	})
 })

@@ -297,7 +297,7 @@ func (m *Model) buildCells() []grid.Cell {
 					VisibleMinWidth: widthMinTerm + m.cellWidths.WidthQuoteExtended + (6 * WidthGutter) + (3 * WidthLabel) + m.cellWidths.WidthQuoteRange + m.cellWidths.WidthVolumeMarketCap,
 				},
 				{
-					Text:            textVolumeMarketCap(m.config.Asset),
+					Text:            textVolumeMarketCap(m.config.Asset, m.config.Styles),
 					Width:           m.cellWidths.WidthVolumeMarketCap,
 					Align:           grid.Right,
 					VisibleMinWidth: widthMinTerm + m.cellWidths.WidthQuoteExtended + (5 * WidthGutter) + (2 * WidthLabel) + m.cellWidths.WidthQuoteRange + m.cellWidths.WidthVolumeMarketCap,
@@ -522,7 +522,18 @@ func textQuoteRangeLabels(asset *c.Asset, styles c.Styles) string {
 	return ""
 }
 
-func textVolumeMarketCap(asset *c.Asset) string {
+func textVolumeMarketCap(asset *c.Asset, styles c.Styles) string {
+
+	if asset.Class == c.AssetClassOption {
+		currentPremium := "-"
+		if asset.QuoteOption.CurrentPremium != 0.0 {
+			currentPremium = u.ConvertFloatToStringWithCommas(asset.QuoteOption.CurrentPremium, asset.Meta.IsVariablePrecision)
+		}
+
+		return currentPremium +
+			"\n" +
+			textMoneyness(asset, styles)
+	}
 
 	if asset.Class == c.AssetClassFuturesContract {
 		return u.ConvertFloatToStringWithCommas(asset.QuoteFutures.OpenInterest, true) +
@@ -536,6 +547,12 @@ func textVolumeMarketCap(asset *c.Asset) string {
 }
 func textVolumeMarketCapLabels(asset *c.Asset, styles c.Styles) string {
 
+	if asset.Class == c.AssetClassOption {
+		return styles.TextLabel("Cur. Premium:") +
+			"\n" +
+			styles.TextLabel("Status:")
+	}
+
 	if asset.Class == c.AssetClassFuturesContract {
 		return styles.TextLabel("Open Interest:") +
 			"\n" +
@@ -545,6 +562,31 @@ func textVolumeMarketCapLabels(asset *c.Asset, styles c.Styles) string {
 	return styles.TextLabel("Market Cap:") +
 		"\n" +
 		styles.TextLabel("Volume:")
+}
+
+// textMoneyness returns whether an option is in, at, or out of the money based on
+// the underlying's distance from the strike. In-the-money is emphasized.
+func textMoneyness(asset *c.Asset, styles c.Styles) string {
+
+	diffToStrike := asset.QuoteOption.DiffToStrike
+
+	if diffToStrike == 0.0 {
+		return styles.Text("ATM")
+	}
+
+	inTheMoney := false
+	switch strings.ToLower(asset.QuoteOption.Type) {
+	case "call":
+		inTheMoney = diffToStrike > 0.0
+	case "put":
+		inTheMoney = diffToStrike < 0.0
+	}
+
+	if inTheMoney {
+		return styles.Text("ITM")
+	}
+
+	return styles.TextLight("OTM")
 }
 
 func textMarketState(asset *c.Asset, styles c.Styles) string {

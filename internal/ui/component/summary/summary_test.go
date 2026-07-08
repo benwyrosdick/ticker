@@ -20,13 +20,14 @@ func removeFormatting(text string) string {
 var _ = Describe("Summary", func() {
 
 	ctxFixture := c.Context{Reference: c.Reference{Styles: c.Styles{
-		Text:      func(v string) string { return v },
-		TextLight: func(v string) string { return v },
-		TextLabel: func(v string) string { return v },
-		TextBold:  func(v string) string { return v },
-		TextLine:  func(v string) string { return v },
-		TextPrice: func(percent float64, text string) string { return text },
-		Tag:       func(v string) string { return v },
+		Text:       func(v string) string { return v },
+		TextLight:  func(v string) string { return v },
+		TextLabel:  func(v string) string { return v },
+		TextBold:   func(v string) string { return v },
+		TextLine:   func(v string) string { return v },
+		TextHeader: func(v string) string { return v },
+		TextPrice:  func(percent float64, text string) string { return text },
+		Tag:        func(v string) string { return v },
 	}}}
 
 	When("the change is positive", func() {
