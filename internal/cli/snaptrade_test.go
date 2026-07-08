@@ -52,43 +52,77 @@ var _ = Describe("SnapTrade", func() {
 		Expect(snaptrade.NewStore(fs, xdg.DataHome).SaveUserSecret("ben", "secret")).To(Succeed())
 	}
 
-	Describe("RefreshSnapTradeGroups", func() {
+	Describe("FetchSnapTradeAccountGroups", func() {
 
 		When("the user is connected", func() {
-			It("should return one SnapTrade-marked group per account with holdings from positions", func() {
+			It("should return a placeholder group per account (no holdings fetched yet)", func() {
 				seedSecret()
+				requestedPositions := false
 				server.RouteToHandler("GET", "/accounts",
 					ghttp.RespondWithJSONEncoded(http.StatusOK, []snaptrade.Account{
 						{ID: "acct-1", Name: "Robinhood Individual"},
+						{ID: "acct-2", Name: "Robinhood Crypto"},
 					}),
 				)
-				server.RouteToHandler("GET", "/accounts/acct-1/positions",
-					ghttp.RespondWithJSONEncoded(http.StatusOK, []snaptrade.Position{
-						{Symbol: &snaptrade.PositionSymbol{Symbol: &snaptrade.UniversalSymbol{Symbol: "AAPL"}}, Units: 10, AveragePurchasePrice: 150},
-					}),
-				)
-				server.RouteToHandler("GET", "/accounts/acct-1/options",
-					ghttp.RespondWithJSONEncoded(http.StatusOK, []snaptrade.OptionsPosition{}),
-				)
+				server.RouteToHandler("GET", "/accounts/acct-1/positions", func(_ http.ResponseWriter, _ *http.Request) {
+					requestedPositions = true
+				})
 
-				groups, err := cli.RefreshSnapTradeGroups(dep, config)
+				groups, err := cli.FetchSnapTradeAccountGroups(dep, config)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(groups).To(HaveLen(1))
-				Expect(groups[0].IsSnapTrade).To(BeTrue())
+				Expect(groups).To(HaveLen(2))
 				Expect(groups[0].Name).To(Equal("Robinhood Individual"))
-				Expect(groups[0].Holdings).To(Equal([]c.Lot{{Symbol: "AAPL", Quantity: 10, UnitCost: 150}}))
-				Expect(groups[0].SymbolsBySource).To(HaveLen(1))
-				Expect(groups[0].SymbolsBySource[0].Source).To(Equal(c.QuoteSourceYahoo))
+				Expect(groups[0].IsSnapTrade).To(BeTrue())
+				Expect(groups[0].SnapTradeAccountID).To(Equal("acct-1"))
+				Expect(groups[0].Holdings).To(BeEmpty())
+				Expect(groups[0].SymbolsBySource).To(BeEmpty())
+				Expect(requestedPositions).To(BeFalse()) // holdings are loaded lazily, not here
 			})
 		})
 
-		When("an account holds both stocks and options", func() {
-			It("should build a single group containing holdings and options", func() {
+		When("using personal keys", func() {
+			It("should omit the userId query param", func() {
+				personalConfig := c.Config{SnapTrade: c.ConfigSnapTrade{ClientID: "client-id", ConsumerKey: "consumer-key"}}
+				server.RouteToHandler("GET", "/accounts", ghttp.CombineHandlers(
+					func(_ http.ResponseWriter, req *http.Request) {
+						defer GinkgoRecover()
+						Expect(req.URL.Query().Has("userId")).To(BeFalse())
+					},
+					ghttp.RespondWithJSONEncoded(http.StatusOK, []snaptrade.Account{{ID: "acct-1", Name: "Robinhood"}}),
+				))
+
+				groups, err := cli.FetchSnapTradeAccountGroups(dep, personalConfig)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(groups).To(HaveLen(1))
+			})
+		})
+
+		When("SnapTrade is not configured", func() {
+			It("should return no groups", func() {
+				groups, err := cli.FetchSnapTradeAccountGroups(dep, c.Config{})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(groups).To(BeEmpty())
+			})
+		})
+
+		When("the user has not connected (no stored secret)", func() {
+			It("should return no groups", func() {
+				groups, err := cli.FetchSnapTradeAccountGroups(dep, config)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(groups).To(BeEmpty())
+			})
+		})
+	})
+
+	Describe("LoadSnapTradeAccountGroup", func() {
+
+		When("the account holds stocks and options", func() {
+			It("should build a single resolved group with holdings and options", func() {
 				seedSecret()
-				server.RouteToHandler("GET", "/accounts",
-					ghttp.RespondWithJSONEncoded(http.StatusOK, []snaptrade.Account{{ID: "acct-1", Name: "Robinhood Individual"}}),
-				)
 				server.RouteToHandler("GET", "/accounts/acct-1/positions",
 					ghttp.RespondWithJSONEncoded(http.StatusOK, []snaptrade.Position{
 						{Symbol: &snaptrade.PositionSymbol{Symbol: &snaptrade.UniversalSymbol{Symbol: "NVDA"}}, Units: 10, AveragePurchasePrice: 150},
@@ -108,76 +142,31 @@ var _ = Describe("SnapTrade", func() {
 					}),
 				)
 
-				groups, err := cli.RefreshSnapTradeGroups(dep, config)
+				group, err := cli.LoadSnapTradeAccountGroup(dep, config, "acct-1", "Robinhood Individual")
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(groups).To(HaveLen(1))
-				Expect(groups[0].Name).To(Equal("Robinhood Individual"))
-				Expect(groups[0].IsSnapTrade).To(BeTrue())
-				Expect(groups[0].Holdings).To(Equal([]c.Lot{{Symbol: "NVDA", Quantity: 10, UnitCost: 150}}))
-				Expect(groups[0].Options).To(Equal([]c.Option{
+				Expect(group.IsSnapTrade).To(BeTrue())
+				Expect(group.SnapTradeAccountID).To(Equal("acct-1"))
+				Expect(group.Name).To(Equal("Robinhood Individual"))
+				Expect(group.Holdings).To(Equal([]c.Lot{{Symbol: "NVDA", Quantity: 10, UnitCost: 150}}))
+				Expect(group.Options).To(Equal([]c.Option{
 					{Symbol: "AAPL", StrikePrice: 255, Type: "put", Premium: 2.7, Contracts: 2},
 				}))
+				Expect(group.SymbolsBySource).NotTo(BeEmpty())
 			})
 		})
 
-		When("using personal keys (no user-id, no stored secret)", func() {
-			It("should fetch holdings without registering or a stored secret", func() {
-				personalConfig := c.Config{SnapTrade: c.ConfigSnapTrade{ClientID: "client-id", ConsumerKey: "consumer-key"}}
-
-				server.RouteToHandler("GET", "/accounts", ghttp.CombineHandlers(
-					func(_ http.ResponseWriter, req *http.Request) {
-						defer GinkgoRecover()
-						Expect(req.URL.Query().Has("userId")).To(BeFalse())
-					},
-					ghttp.RespondWithJSONEncoded(http.StatusOK, []snaptrade.Account{{ID: "acct-1", Name: "Robinhood"}}),
-				))
-				server.RouteToHandler("GET", "/accounts/acct-1/positions",
-					ghttp.RespondWithJSONEncoded(http.StatusOK, []snaptrade.Position{
-						{Symbol: &snaptrade.PositionSymbol{Symbol: &snaptrade.UniversalSymbol{Symbol: "AAPL"}}, Units: 5, AveragePurchasePrice: 100},
-					}),
-				)
-				server.RouteToHandler("GET", "/accounts/acct-1/options",
-					ghttp.RespondWithJSONEncoded(http.StatusOK, []snaptrade.OptionsPosition{}),
-				)
-
-				groups, err := cli.RefreshSnapTradeGroups(dep, personalConfig)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(groups).To(HaveLen(1))
-				Expect(groups[0].Holdings).To(Equal([]c.Lot{{Symbol: "AAPL", Quantity: 5, UnitCost: 100}}))
-			})
-		})
-
-		When("SnapTrade is not configured", func() {
-			It("should return no groups", func() {
-				groups, err := cli.RefreshSnapTradeGroups(dep, c.Config{})
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(groups).To(BeEmpty())
-			})
-		})
-
-		When("the user has not connected (no stored secret)", func() {
-			It("should return no groups", func() {
-				groups, err := cli.RefreshSnapTradeGroups(dep, config)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(groups).To(BeEmpty())
-			})
-		})
-
-		When("the SnapTrade API returns an error", func() {
-			It("should degrade to no groups without erroring", func() {
+		When("positions cannot be fetched", func() {
+			It("should return an empty group and an error", func() {
 				seedSecret()
-				server.RouteToHandler("GET", "/accounts",
+				server.RouteToHandler("GET", "/accounts/acct-1/positions",
 					ghttp.RespondWith(http.StatusInternalServerError, ""),
 				)
 
-				groups, err := cli.RefreshSnapTradeGroups(dep, config)
+				group, err := cli.LoadSnapTradeAccountGroup(dep, config, "acct-1", "Robinhood Individual")
 
-				Expect(err).NotTo(HaveOccurred())
-				Expect(groups).To(BeEmpty())
+				Expect(err).To(HaveOccurred())
+				Expect(group.SnapTradeAccountID).To(BeEmpty())
 			})
 		})
 	})
