@@ -160,6 +160,38 @@ Watchlists and holdings can be grouped in `.ticker.yml` under the `groups` prope
 * Ordering is defined by order in the configuration file
 * The `holdings` property replaces `lots` under `groups` but serves the same purpose
 
+### Options Tracking
+
+Track options contracts with strike price, breakeven price, and difference to strike. Options can be added to groups alongside watchlists and holdings:
+
+```yaml
+groups:
+  - name: option_group
+    options:
+      - symbol: AAPL
+        strike_price: 150.00
+        type: put
+        premium: 3.50
+        contracts: 2
+      - symbol: TSLA
+        strike_price: 250.00
+        type: call
+        premium: 15.00
+        contracts: 1
+```
+
+When viewing options with `--show-fundamentals`:
+* **Strike Price** - The strike price of the option contract
+* **Breakeven** - Calculated breakeven price (strike + premium for calls, strike - premium for puts)
+* **Diff to Strike** - Current underlying price minus strike price
+
+* `symbol` - Ticker symbol of the underlying asset
+* `strike_price` - Strike price of the option
+* `type` - Either `put` or `call`
+* `premium` - Premium paid per share
+* `contracts` - Number of contracts
+
+
 ### Data Sources & Symbols
 
 `ticker` pulls market data from a few different sources with Yahoo Finance as the default. Symbols for non default data sources follow the format `<symbol>.<source>` where `<symbol>` is the canonical symbol within that data source and `<source>` is the data source specifier. Below is a list of the supported data sources and their specifiers:

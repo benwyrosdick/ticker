@@ -290,6 +290,14 @@ func getGroups(config c.Config, d c.Dependencies) ([]c.AssetGroup, error) {
 			}
 		}
 
+		for _, option := range configAssetGroup.Options {
+			if !symbols[option.Symbol] {
+				symbols[option.Symbol] = true
+				symbolAndSource := getSymbolAndSource(option.Symbol, tickerSymbolToSourceSymbol)
+				symbolsUnique = appendSymbol(symbolsUnique, symbolAndSource)
+			}
+		}
+
 		for _, symbolsBySource := range symbolsUnique {
 			assetGroupSymbolsBySource = append(assetGroupSymbolsBySource, symbolsBySource)
 		}
