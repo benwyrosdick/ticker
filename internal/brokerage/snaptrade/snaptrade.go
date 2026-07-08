@@ -47,9 +47,10 @@ func New(baseURL, clientID, consumerKey string) *Client {
 
 // Account is a brokerage account returned by SnapTrade.
 type Account struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	Number string `json:"number"`
+	ID              string `json:"id"`
+	Name            string `json:"name"`
+	Number          string `json:"number"`
+	InstitutionName string `json:"institution_name"`
 }
 
 // Position is a single holding within an account.

@@ -65,9 +65,11 @@ func FetchSnapTradeAccountGroups(d c.Dependencies, config c.Config) ([]c.AssetGr
 
 	for _, account := range accounts {
 		groups = append(groups, c.AssetGroup{
-			ConfigAssetGroup:   c.ConfigAssetGroup{Name: snaptrade.AccountName(account)},
-			IsSnapTrade:        true,
-			SnapTradeAccountID: account.ID,
+			ConfigAssetGroup:       c.ConfigAssetGroup{Name: snaptrade.AccountName(account)},
+			IsSnapTrade:            true,
+			SnapTradeAccountID:     account.ID,
+			SnapTradeInstitution:   account.InstitutionName,
+			SnapTradeAccountNumber: account.Number,
 		})
 	}
 
