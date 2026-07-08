@@ -171,6 +171,25 @@ var _ = Describe("SnapTrade", func() {
 		})
 	})
 
+	Describe("SnapTrade preferences", func() {
+		It("should persist and reload account preferences", func() {
+			prefs := snaptrade.Preferences{HiddenAccounts: []string{"acct-2"}, DefaultAccountID: "acct-1"}
+
+			Expect(cli.SaveSnapTradePreferences(dep, prefs)).To(Succeed())
+
+			out := cli.LoadSnapTradePreferences(dep)
+			Expect(out.DefaultAccountID).To(Equal("acct-1"))
+			Expect(out.IsHidden("acct-2")).To(BeTrue())
+		})
+
+		It("should return empty preferences when none are stored", func() {
+			out := cli.LoadSnapTradePreferences(dep)
+
+			Expect(out.HiddenAccounts).To(BeEmpty())
+			Expect(out.DefaultAccountID).To(BeEmpty())
+		})
+	})
+
 	Describe("ConnectSnapTrade", func() {
 
 		When("required config is missing", func() {

@@ -37,7 +37,7 @@ var _ = Describe("Watchlist", func() {
 	It("should render a watchlist", func() {
 		m := NewModel(Config{
 			Styles:                stylesFixture,
-			ShowPositions:          true,
+			ShowPositions:         true,
 			ExtraInfoExchange:     true,
 			ExtraInfoFundamentals: true,
 			Sort:                  "alpha",
@@ -137,9 +137,9 @@ var _ = Describe("Watchlist", func() {
 	When("an unknown update message is received", func() {
 		It("should ignore the message", func() {
 			m := NewModel(Config{
-				Styles:       stylesFixture,
+				Styles:        stylesFixture,
 				ShowPositions: false,
-				Sort:         "alpha",
+				Sort:          "alpha",
 			})
 
 			// Initial state
@@ -518,7 +518,7 @@ var _ = Describe("Watchlist", func() {
 	When("the option for extra holding information is set", func() {
 		It("should render extra holding information", func() {
 			m := NewModel(Config{
-				Styles:       stylesFixture,
+				Styles:        stylesFixture,
 				ShowPositions: true,
 			})
 			m.Update(tea.WindowSizeMsg{Width: 120})
@@ -554,7 +554,7 @@ var _ = Describe("Watchlist", func() {
 		When("the holding quantity is high", func() {
 			It("should render extra holding information without truncation", func() {
 				m := NewModel(Config{
-					Styles:       stylesFixture,
+					Styles:        stylesFixture,
 					ShowPositions: true,
 				})
 				m.Update(tea.WindowSizeMsg{Width: 120})
@@ -583,7 +583,7 @@ var _ = Describe("Watchlist", func() {
 				m.Update(SetAssetsMsg(setAssetsMsg))
 				Expect(removeFormatting(m.View())).To(ContainSubstring("Quantity"))
 				Expect(removeFormatting(m.View())).To(ContainSubstring("Avg. Cost"))
-				Expect(removeFormatting(m.View())).To(ContainSubstring("92,709.00"))
+				Expect(removeFormatting(m.View())).To(ContainSubstring("92709.00"))
 				Expect(removeFormatting(m.View())).To(ContainSubstring("0.00"))
 			})
 		})
@@ -591,7 +591,7 @@ var _ = Describe("Watchlist", func() {
 		When("there is no position", func() {
 			It("should not render quantity or average cost", func() {
 				m := NewModel(Config{
-					Styles:       stylesFixture,
+					Styles:        stylesFixture,
 					ShowPositions: true,
 				})
 				m.Update(tea.WindowSizeMsg{Width: 120})
@@ -648,7 +648,7 @@ var _ = Describe("Watchlist", func() {
 		It("should return nil command", func() {
 			m := NewModel(Config{
 				Styles:                stylesFixture,
-				ShowPositions:          false,
+				ShowPositions:         false,
 				ExtraInfoExchange:     false,
 				ExtraInfoFundamentals: false,
 				Sort:                  "alpha",
@@ -733,7 +733,7 @@ var _ = Describe("Watchlist", func() {
 		It("should render Holdings and Options as separate labeled lists", func() {
 			m := NewModel(Config{
 				Styles:                stylesFixture,
-				ShowHoldings:          true,
+				ShowPositions:         true,
 				ExtraInfoFundamentals: true,
 				Sort:                  "alpha",
 			})
@@ -742,7 +742,7 @@ var _ = Describe("Watchlist", func() {
 				{
 					Symbol: "MSFT", Name: "Microsoft", Class: c.AssetClassStock,
 					QuotePrice: c.QuotePrice{Price: 400.0},
-					Holding:    c.Holding{Quantity: 10, Value: 4000, UnitCost: 300},
+					Position:   c.Position{Quantity: 10, Value: 4000, UnitCost: 300},
 					Exchange:   c.Exchange{IsActive: true, IsRegularTradingSession: true},
 				},
 				{
@@ -794,13 +794,13 @@ var _ = Describe("Watchlist", func() {
 		})
 
 		It("should not render headings when the group has only holdings", func() {
-			m := NewModel(Config{Styles: stylesFixture, ShowHoldings: true, Sort: "alpha"})
+			m := NewModel(Config{Styles: stylesFixture, ShowPositions: true, Sort: "alpha"})
 			m, _ = m.Update(tea.WindowSizeMsg{Width: 175})
 			m, _ = m.Update(SetAssetsMsg([]c.Asset{
 				{
 					Symbol: "MSFT", Name: "Microsoft", Class: c.AssetClassStock,
 					QuotePrice: c.QuotePrice{Price: 400.0},
-					Holding:    c.Holding{Quantity: 10, Value: 4000, UnitCost: 300},
+					Position:   c.Position{Quantity: 10, Value: 4000, UnitCost: 300},
 					Exchange:   c.Exchange{IsActive: true, IsRegularTradingSession: true},
 				},
 			}))

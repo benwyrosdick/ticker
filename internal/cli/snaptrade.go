@@ -103,7 +103,7 @@ func LoadSnapTradeAccountGroup(d c.Dependencies, config c.Config, accountID stri
 
 	// Equity symbols resolve to the default source without the CSV, so degrade to an
 	// empty map if it can't be fetched rather than failing the whole account.
-	tickerSymbolToSourceSymbol, err := symbol.GetTickerSymbols(d.SymbolsURL)
+	tickerSymbolToSourceSymbol, err := symbol.GetTickerSymbols(d.SymbolsURL, nil)
 	if err != nil {
 		tickerSymbolToSourceSymbol = symbol.TickerSymbolToSourceSymbol{}
 	}
@@ -114,6 +114,19 @@ func LoadSnapTradeAccountGroup(d c.Dependencies, config c.Config, accountID stri
 	group.SnapTradeAccountID = accountID
 
 	return group, nil
+}
+
+// LoadSnapTradePreferences returns the persisted account display preferences
+// (empty preferences if none are stored or on error).
+func LoadSnapTradePreferences(d c.Dependencies) snaptrade.Preferences {
+	preferences, _ := snaptrade.NewStore(d.Fs, xdg.DataHome).GetPreferences()
+
+	return preferences
+}
+
+// SaveSnapTradePreferences persists the account display preferences.
+func SaveSnapTradePreferences(d c.Dependencies, preferences snaptrade.Preferences) error {
+	return snaptrade.NewStore(d.Fs, xdg.DataHome).SavePreferences(preferences)
 }
 
 // ConnectSnapTrade runs the one-time connection flow: register the user if
