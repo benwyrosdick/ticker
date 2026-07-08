@@ -161,9 +161,12 @@ var _ = Describe("SnapTrade Client", func() {
 		})
 	})
 
-	Describe("TransformToOptionsConfigAssetGroup", func() {
-		It("should map option positions to a named options group keyed by underlying", func() {
-			positions := []OptionsPosition{
+	Describe("TransformToConfigAssetGroup with options", func() {
+		It("should map both equity and option positions into a single group", func() {
+			positions := []Position{
+				{Symbol: &PositionSymbol{Symbol: &UniversalSymbol{Symbol: "NVDA"}}, Units: 3, AveragePurchasePrice: 4.42},
+			}
+			optionPositions := []OptionsPosition{
 				{
 					Symbol: &OptionBrokerageSymbol{OptionSymbol: &OptionsSymbol{
 						OptionType:       "PUT",
@@ -175,20 +178,20 @@ var _ = Describe("SnapTrade Client", func() {
 				},
 			}
 
-			group, ok := TransformToOptionsConfigAssetGroup(Account{ID: "acct-1", Name: "Robinhood"}, positions)
+			group := TransformToConfigAssetGroup(Account{ID: "acct-1", Name: "Robinhood"}, positions, optionPositions)
 
-			Expect(ok).To(BeTrue())
-			Expect(group.Name).To(Equal("Robinhood Options"))
+			Expect(group.Name).To(Equal("Robinhood"))
+			Expect(group.Holdings).To(Equal([]c.Lot{{Symbol: "NVDA", Quantity: 3, UnitCost: 4.42}}))
 			// average_purchase_price is per contract; ticker's premium is per share
 			Expect(group.Options).To(Equal([]c.Option{
 				{Symbol: "AAPL", StrikePrice: 255, Type: "put", Premium: 2.7, Contracts: 1},
 			}))
 		})
 
-		It("should return ok=false when there are no resolvable options", func() {
-			_, ok := TransformToOptionsConfigAssetGroup(Account{ID: "acct-1"}, []OptionsPosition{{Symbol: nil}})
+		It("should skip option positions without a resolvable underlying symbol", func() {
+			group := TransformToConfigAssetGroup(Account{ID: "acct-1"}, nil, []OptionsPosition{{Symbol: nil}})
 
-			Expect(ok).To(BeFalse())
+			Expect(group.Options).To(BeEmpty())
 		})
 	})
 
@@ -229,7 +232,7 @@ var _ = Describe("SnapTrade Client", func() {
 				{Symbol: &PositionSymbol{Symbol: &UniversalSymbol{Symbol: "TSLA"}}, Units: 2, AveragePurchasePrice: 250},
 			}
 
-			group := TransformToConfigAssetGroup(account, positions)
+			group := TransformToConfigAssetGroup(account, positions, nil)
 
 			Expect(group.Name).To(Equal("Robinhood Individual"))
 			Expect(group.Holdings).To(Equal([]c.Lot{
@@ -244,15 +247,15 @@ var _ = Describe("SnapTrade Client", func() {
 				{Symbol: nil, Units: 100, AveragePurchasePrice: 1},
 			}
 
-			group := TransformToConfigAssetGroup(Account{ID: "acct-1"}, positions)
+			group := TransformToConfigAssetGroup(Account{ID: "acct-1"}, positions, nil)
 
 			Expect(group.Holdings).To(HaveLen(1))
 			Expect(group.Holdings[0].Symbol).To(Equal("AAPL"))
 		})
 
 		It("should fall back to account number then id for the group name", func() {
-			Expect(TransformToConfigAssetGroup(Account{ID: "acct-1", Number: "RH123"}, nil).Name).To(Equal("RH123"))
-			Expect(TransformToConfigAssetGroup(Account{ID: "acct-1"}, nil).Name).To(Equal("acct-1"))
+			Expect(TransformToConfigAssetGroup(Account{ID: "acct-1", Number: "RH123"}, nil, nil).Name).To(Equal("RH123"))
+			Expect(TransformToConfigAssetGroup(Account{ID: "acct-1"}, nil, nil).Name).To(Equal("acct-1"))
 		})
 	})
 })

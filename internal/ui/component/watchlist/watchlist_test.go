@@ -727,4 +727,62 @@ var _ = Describe("Watchlist", func() {
 			Expect(aaplIndex).To(BeNumerically("<", googIndex))
 		})
 	})
+
+	Describe("when a group mixes holdings and options", func() {
+		It("should render Holdings and Options as separate labeled lists", func() {
+			m := NewModel(Config{
+				Styles:                stylesFixture,
+				ShowHoldings:          true,
+				ExtraInfoFundamentals: true,
+				Sort:                  "alpha",
+			})
+			m, _ = m.Update(tea.WindowSizeMsg{Width: 175})
+			m, _ = m.Update(SetAssetsMsg([]c.Asset{
+				{
+					Symbol: "MSFT", Name: "Microsoft", Class: c.AssetClassStock,
+					QuotePrice: c.QuotePrice{Price: 400.0},
+					Holding:    c.Holding{Quantity: 10, Value: 4000, UnitCost: 300},
+					Exchange:   c.Exchange{IsActive: true, IsRegularTradingSession: true},
+				},
+				{
+					Symbol: "AAPL", Name: "Apple", Class: c.AssetClassOption,
+					QuotePrice:  c.QuotePrice{Price: 250.0},
+					QuoteOption: c.QuoteOption{StrikePrice: 255, BreakevenPrice: 252.3, Type: "put", Premium: 2.7, DiffToStrike: -5},
+					Exchange:    c.Exchange{IsActive: true, IsRegularTradingSession: true},
+				},
+			}))
+
+			view := removeFormatting(m.View())
+
+			holdingsHeadingIndex := strings.Index(view, "Holdings")
+			optionsHeadingIndex := strings.Index(view, "Options")
+			msftIndex := strings.Index(view, "MSFT")
+			aaplIndex := strings.Index(view, "AAPL")
+
+			Expect(holdingsHeadingIndex).To(BeNumerically(">=", 0))
+			Expect(optionsHeadingIndex).To(BeNumerically(">=", 0))
+			// Holdings heading, then MSFT, then Options heading, then AAPL
+			Expect(holdingsHeadingIndex).To(BeNumerically("<", msftIndex))
+			Expect(msftIndex).To(BeNumerically("<", optionsHeadingIndex))
+			Expect(optionsHeadingIndex).To(BeNumerically("<", aaplIndex))
+		})
+
+		It("should not render headings when the group has only holdings", func() {
+			m := NewModel(Config{Styles: stylesFixture, ShowHoldings: true, Sort: "alpha"})
+			m, _ = m.Update(tea.WindowSizeMsg{Width: 175})
+			m, _ = m.Update(SetAssetsMsg([]c.Asset{
+				{
+					Symbol: "MSFT", Name: "Microsoft", Class: c.AssetClassStock,
+					QuotePrice: c.QuotePrice{Price: 400.0},
+					Holding:    c.Holding{Quantity: 10, Value: 4000, UnitCost: 300},
+					Exchange:   c.Exchange{IsActive: true, IsRegularTradingSession: true},
+				},
+			}))
+
+			view := removeFormatting(m.View())
+
+			Expect(view).NotTo(ContainSubstring("Holdings"))
+			Expect(view).NotTo(ContainSubstring("Options"))
+		})
+	})
 })

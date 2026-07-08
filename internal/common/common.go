@@ -138,6 +138,7 @@ type Option struct {
 	Type        string  `yaml:"type"` // "put" or "call"
 	Premium     float64 `yaml:"premium"`
 	Contracts   float64 `yaml:"contracts"`
+	Expiration  string  `yaml:"expiration"`
 }
 
 // type LotFixedProperties struct {
@@ -235,6 +236,7 @@ type QuoteOption struct {
 	Premium        float64
 	Contracts      float64
 	DiffToStrike   float64
+	Expiration     string
 }
 
 type Exchange struct {

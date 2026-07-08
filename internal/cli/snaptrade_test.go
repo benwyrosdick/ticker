@@ -83,15 +83,15 @@ var _ = Describe("SnapTrade", func() {
 			})
 		})
 
-		When("an account holds options", func() {
-			It("should add a separate options group per account", func() {
+		When("an account holds both stocks and options", func() {
+			It("should build a single group containing holdings and options", func() {
 				seedSecret()
 				server.RouteToHandler("GET", "/accounts",
 					ghttp.RespondWithJSONEncoded(http.StatusOK, []snaptrade.Account{{ID: "acct-1", Name: "Robinhood Individual"}}),
 				)
 				server.RouteToHandler("GET", "/accounts/acct-1/positions",
 					ghttp.RespondWithJSONEncoded(http.StatusOK, []snaptrade.Position{
-						{Symbol: &snaptrade.PositionSymbol{Symbol: &snaptrade.UniversalSymbol{Symbol: "AAPL"}}, Units: 10, AveragePurchasePrice: 150},
+						{Symbol: &snaptrade.PositionSymbol{Symbol: &snaptrade.UniversalSymbol{Symbol: "NVDA"}}, Units: 10, AveragePurchasePrice: 150},
 					}),
 				)
 				server.RouteToHandler("GET", "/accounts/acct-1/options",
@@ -111,11 +111,11 @@ var _ = Describe("SnapTrade", func() {
 				groups, err := cli.RefreshSnapTradeGroups(dep, config)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(groups).To(HaveLen(2))
+				Expect(groups).To(HaveLen(1))
 				Expect(groups[0].Name).To(Equal("Robinhood Individual"))
-				Expect(groups[1].Name).To(Equal("Robinhood Individual Options"))
-				Expect(groups[1].IsSnapTrade).To(BeTrue())
-				Expect(groups[1].Options).To(Equal([]c.Option{
+				Expect(groups[0].IsSnapTrade).To(BeTrue())
+				Expect(groups[0].Holdings).To(Equal([]c.Lot{{Symbol: "NVDA", Quantity: 10, UnitCost: 150}}))
+				Expect(groups[0].Options).To(Equal([]c.Option{
 					{Symbol: "AAPL", StrikePrice: 255, Type: "put", Premium: 2.7, Contracts: 2},
 				}))
 			})

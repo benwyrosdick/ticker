@@ -293,11 +293,11 @@ func (c *Client) sign(path, rawQuery string, body []byte) (string, error) {
 	return base64.StdEncoding.EncodeToString(mac.Sum(nil)), nil
 }
 
-// TransformToConfigAssetGroup maps a SnapTrade account and its positions into a
-// ticker asset group: one holding per position, keyed by ticker symbol. Prices
-// are resolved live by the normal quote sources; only quantity and cost basis
-// come from SnapTrade.
-func TransformToConfigAssetGroup(account Account, positions []Position) c.ConfigAssetGroup {
+// TransformToConfigAssetGroup maps a SnapTrade account, its equity positions,
+// and its option positions into a single ticker asset group. Holdings and
+// options are keyed by ticker/underlying symbol; prices are resolved live by
+// the normal quote sources, and only quantity and cost basis come from SnapTrade.
+func TransformToConfigAssetGroup(account Account, positions []Position, optionPositions []OptionsPosition) c.ConfigAssetGroup {
 	holdings := make([]c.Lot, 0, len(positions))
 
 	for _, position := range positions {
@@ -306,33 +306,19 @@ func TransformToConfigAssetGroup(account Account, positions []Position) c.Config
 		}
 	}
 
-	return c.ConfigAssetGroup{
-		Name:     accountName(account),
-		Holdings: holdings,
-	}
-}
+	options := make([]c.Option, 0, len(optionPositions))
 
-// TransformToOptionsConfigAssetGroup maps an account's option positions into a
-// ticker asset group whose Options drive the strike/breakeven/premium display.
-// Each option is keyed by its underlying symbol (priced live by the normal
-// sources). Returns ok=false when the account holds no resolvable options.
-func TransformToOptionsConfigAssetGroup(account Account, positions []OptionsPosition) (c.ConfigAssetGroup, bool) {
-	options := make([]c.Option, 0, len(positions))
-
-	for _, position := range positions {
+	for _, position := range optionPositions {
 		if option, ok := transformOptionPosition(position); ok {
 			options = append(options, option)
 		}
 	}
 
-	if len(options) == 0 {
-		return c.ConfigAssetGroup{}, false
-	}
-
 	return c.ConfigAssetGroup{
-		Name:    accountName(account) + " Options",
-		Options: options,
-	}, true
+		Name:     accountName(account),
+		Holdings: holdings,
+		Options:  options,
+	}
 }
 
 func transformOptionPosition(position OptionsPosition) (c.Option, bool) {
@@ -351,6 +337,7 @@ func transformOptionPosition(position OptionsPosition) (c.Option, bool) {
 		Type:        strings.ToLower(optionSymbol.OptionType),
 		Premium:     position.AveragePurchasePrice / optionContractMultiplier,
 		Contracts:   position.Units,
+		Expiration:  optionSymbol.ExpirationDate,
 	}, true
 }
 

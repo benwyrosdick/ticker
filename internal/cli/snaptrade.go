@@ -63,28 +63,24 @@ func buildSnapTradeGroups(d c.Dependencies, config c.Config, tickerSymbolToSourc
 			continue
 		}
 
-		// Skip accounts with no equity holdings (e.g. a crypto-only account returns
-		// nothing here) rather than showing an empty tab.
-		if stockConfig := snaptrade.TransformToConfigAssetGroup(account, positions); len(stockConfig.Holdings) > 0 {
-			group := buildAssetGroup(stockConfig, tickerSymbolToSourceSymbol)
-			group.IsSnapTrade = true
-			groups = append(groups, group)
-		}
-
-		// Options come from a separate endpoint and get their own group per account so
-		// they don't collide with equity holdings on the same underlying symbol.
+		// Options come from a separate endpoint; a failure there shouldn't hide holdings.
 		optionPositions, err := client.ListOptionHoldings(userID, userSecret, account.ID)
 		if err != nil {
 			logSnapTradeWarning(config, "unable to get option holdings", err)
 
+			optionPositions = nil
+		}
+
+		group := buildAssetGroup(snaptrade.TransformToConfigAssetGroup(account, positions, optionPositions), tickerSymbolToSourceSymbol)
+
+		// Skip accounts with nothing to show (e.g. a crypto-only account returns no
+		// equity positions or options here) rather than adding an empty tab.
+		if len(group.SymbolsBySource) == 0 {
 			continue
 		}
 
-		if optionsConfig, ok := snaptrade.TransformToOptionsConfigAssetGroup(account, optionPositions); ok {
-			optionsGroup := buildAssetGroup(optionsConfig, tickerSymbolToSourceSymbol)
-			optionsGroup.IsSnapTrade = true
-			groups = append(groups, optionsGroup)
-		}
+		group.IsSnapTrade = true
+		groups = append(groups, group)
 	}
 
 	return groups

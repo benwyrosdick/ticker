@@ -173,12 +173,15 @@ groups:
         type: put
         premium: 3.50
         contracts: 2
+        expiration: 2026-07-10
       - symbol: TSLA
         strike_price: 250.00
         type: call
         premium: 15.00
         contracts: 1
 ```
+
+Each option is its own row, keyed by contract rather than by symbol. You can list multiple options on the same underlying (e.g. different strikes or expirations) and they each get a distinct row, and a stock holding and an option on the same underlying appear as separate rows. When a group mixes holdings and options, they are shown as separate labeled lists (`Holdings` then `Options`).
 
 When viewing options with `--show-fundamentals`:
 * **Strike Price** - The strike price of the option contract
@@ -190,6 +193,7 @@ When viewing options with `--show-fundamentals`:
 * `type` - Either `put` or `call`
 * `premium` - Premium paid per share
 * `contracts` - Number of contracts
+* `expiration` - (optional) Expiration date (`YYYY-MM-DD`), shown in the row label to distinguish contracts
 
 
 ### Live Brokerage Holdings (SnapTrade)
@@ -224,7 +228,7 @@ ticker snaptrade connect
 
 This opens a SnapTrade connection portal in your browser where you log into your brokerage and authorize read-only access. (Commercial keys additionally register a user and store the resulting secret locally under your XDG data directory.) After connecting, run `ticker` and your accounts appear as groups — switch between them with `⭾` and press `r` to re-fetch holdings on demand.
 
-Each account's equity holdings appear as one group; any options in that account appear as a separate `<account> Options` group (so option overlays don't collide with stock holdings on the same underlying). Options are displayed against their underlying's live price — strike, breakeven, premium, and difference to strike are shown with `--show-fundamentals`.
+Each account appears as a single group. When an account holds both stocks and options, the watchlist shows them as separate labeled lists — a `Holdings` section followed by an `Options` section. Options are displayed against their underlying's live price — strike, breakeven, premium, and difference to strike are shown with `--show-fundamentals`.
 
 * `client-id` - Your SnapTrade client ID
 * `consumer-key` - Your SnapTrade consumer key (secret)
