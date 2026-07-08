@@ -17,11 +17,31 @@ type Store struct {
 }
 
 type storeFile struct {
-	Users map[string]storeUser `json:"users"`
+	Users       map[string]storeUser `json:"users"`
+	Preferences Preferences          `json:"preferences"`
 }
 
 type storeUser struct {
 	UserSecret string `json:"user_secret"`
+}
+
+// Preferences holds the user's account display choices, persisted across runs.
+type Preferences struct {
+	// HiddenAccounts are account ids the user has chosen not to show (all others show)
+	HiddenAccounts []string `json:"hidden_accounts,omitempty"`
+	// DefaultAccountID is the account to select on startup (empty = first group)
+	DefaultAccountID string `json:"default_account_id,omitempty"`
+}
+
+// IsHidden reports whether an account has been hidden by the user.
+func (p Preferences) IsHidden(accountID string) bool {
+	for _, id := range p.HiddenAccounts {
+		if id == accountID {
+			return true
+		}
+	}
+
+	return false
 }
 
 // NewStore returns a Store backed by fs, writing to <dataHome>/ticker/snaptrade.json.
@@ -57,6 +77,32 @@ func (s *Store) SaveUserSecret(userID, userSecret string) error {
 
 	file.Users[userID] = storeUser{UserSecret: userSecret}
 
+	return s.write(file)
+}
+
+// GetPreferences returns the persisted account display preferences.
+func (s *Store) GetPreferences() (Preferences, error) {
+	file, err := s.read()
+	if err != nil {
+		return Preferences{}, err
+	}
+
+	return file.Preferences, nil
+}
+
+// SavePreferences persists the account display preferences, preserving user secrets.
+func (s *Store) SavePreferences(preferences Preferences) error {
+	file, err := s.read()
+	if err != nil {
+		return err
+	}
+
+	file.Preferences = preferences
+
+	return s.write(file)
+}
+
+func (s *Store) write(file storeFile) error {
 	data, err := json.MarshalIndent(file, "", "  ")
 	if err != nil {
 		return err

@@ -286,7 +286,7 @@ var _ = Describe("Asset", func() {
 
 					// Summary should include zero cost positions
 					Expect(outputPositionSummary.Cost).To(Equal(4000.0))
-					Expect(outputPositionSummary.Value).To(Equal(3300.0)) // 1100 + 2200
+					Expect(outputPositionSummary.Value).To(Equal(3300.0))              // 1100 + 2200
 					Expect(outputPositionSummary.TotalChange.Amount).To(Equal(-700.0)) // 3300 - 4000
 					Expect(outputPositionSummary.TotalChange.Percent).To(Equal(-17.5)) // (-700 / 4000) * 100
 				})
@@ -351,7 +351,7 @@ var _ = Describe("Asset", func() {
 				Expect(outputPositionSummary.Cost).To(Equal(0.0))
 				Expect(outputPositionSummary.Value).To(Equal(1100.0))
 				Expect(outputPositionSummary.TotalChange.Amount).To(Equal(1100.0)) // 1100 - 0
-				Expect(outputPositionSummary.TotalChange.Percent).To(Equal(0.0)) // 0 when cost is 0
+				Expect(outputPositionSummary.TotalChange.Percent).To(Equal(0.0))   // 0 when cost is 0
 			})
 		})
 
@@ -380,11 +380,11 @@ var _ = Describe("Asset", func() {
 
 				// TWKS with zero aggregated quantity (10 + (-10) = 0)
 				// Cost calculation: (100*10) + (110*(-10)) = 1000 - 1100 = -100
-				Expect(outputAssets[0].Position.Value).To(Equal(0.0))    // 0 * 110 = 0
-				Expect(outputAssets[0].Position.Cost).To(Equal(-100.0)) // Aggregated cost: 1000 + (-1100) = -100
-				Expect(outputAssets[0].Position.Quantity).To(Equal(0.0)) // 10 + (-10) = 0
-				Expect(outputAssets[0].Position.UnitValue).To(Equal(0.0)) // Should be 0
-				Expect(outputAssets[0].Position.UnitCost).To(Equal(0.0))  // Should be 0
+				Expect(outputAssets[0].Position.Value).To(Equal(0.0))                  // 0 * 110 = 0
+				Expect(outputAssets[0].Position.Cost).To(Equal(-100.0))                // Aggregated cost: 1000 + (-1100) = -100
+				Expect(outputAssets[0].Position.Quantity).To(Equal(0.0))               // 10 + (-10) = 0
+				Expect(outputAssets[0].Position.UnitValue).To(Equal(0.0))              // Should be 0
+				Expect(outputAssets[0].Position.UnitCost).To(Equal(0.0))               // Should be 0
 				Expect(outputAssets[0].Position.TotalChange.Amount).To(Equal(100.0))   // value - cost = 0 - (-100) = 100
 				Expect(outputAssets[0].Position.TotalChange.Percent).To(Equal(-100.0)) // (100 / -100) * 100 = -100
 
@@ -420,7 +420,7 @@ var _ = Describe("Asset", func() {
 							Class:    c.AssetClassFuturesContract,
 							Currency: c.Currency{FromCurrencyCode: "USD"},
 							QuotePrice: c.QuotePrice{
-								Price:         60000.0, // Display price (unchanged)
+								Price:          60000.0, // Display price (unchanged)
 								PricePrevClose: 59000.0,
 								Change:         1000.0,
 								ChangePercent:  1.69,
@@ -489,8 +489,8 @@ var _ = Describe("Asset", func() {
 			It("should show a held underlying and its option as separate rows", func() {
 				inputAssetGroupQuote := c.AssetGroupQuote{
 					AssetGroup: c.AssetGroup{ConfigAssetGroup: c.ConfigAssetGroup{
-						Holdings: []c.Lot{{Symbol: "MSFT", Quantity: 5, UnitCost: 150}},
-						Options:  []c.Option{{Symbol: "MSFT", StrikePrice: 200.0, Type: "call", Premium: 10.0, Contracts: 2}},
+						Lots:    []c.Lot{{Symbol: "MSFT", Quantity: 5, UnitCost: 150}},
+						Options: []c.Option{{Symbol: "MSFT", StrikePrice: 200.0, Type: "call", Premium: 10.0, Contracts: 2}},
 					}},
 					AssetQuotes: []c.AssetQuote{
 						{Name: "Microsoft Inc", Symbol: "MSFT", Class: c.AssetClassStock, Currency: c.Currency{FromCurrencyCode: "USD"}, QuotePrice: c.QuotePrice{Price: 220.0, Change: 20.0, ChangePercent: 10.0}},
@@ -501,7 +501,7 @@ var _ = Describe("Asset", func() {
 
 				Expect(outputAssets).To(HaveLen(2))
 				Expect(outputAssets[0].Class).To(Equal(c.AssetClassStock))
-				Expect(outputAssets[0].Holding.Quantity).To(Equal(5.0))
+				Expect(outputAssets[0].Position.Quantity).To(Equal(5.0))
 				Expect(outputAssets[1].Class).To(Equal(c.AssetClassOption))
 				Expect(outputAssets[1].QuoteOption.StrikePrice).To(Equal(200.0))
 			})

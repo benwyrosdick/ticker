@@ -70,7 +70,7 @@ var _ = Describe("Cli", func() {
 			ExtraInfoExchange:     false,
 			ExtraInfoFundamentals: false,
 			ShowSummary:           false,
-			ShowPositions:          false,
+			ShowPositions:         false,
 			Sort:                  "",
 		}
 		dep = c.Dependencies{
