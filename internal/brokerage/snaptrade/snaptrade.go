@@ -64,6 +64,31 @@ type UniversalSymbol struct {
 	Symbol string `json:"symbol"`
 }
 
+// OptionsPosition is a single option holding within an account.
+type OptionsPosition struct {
+	Symbol               *OptionBrokerageSymbol `json:"symbol"`
+	Units                float64                `json:"units"`
+	AveragePurchasePrice float64                `json:"average_purchase_price"`
+}
+
+// OptionBrokerageSymbol, OptionsSymbol, and UnderlyingSymbol model SnapTrade's
+// nested option symbol (symbol.option_symbol describes the contract; its
+// underlying_symbol.symbol is the ticker used for live pricing).
+type OptionBrokerageSymbol struct {
+	OptionSymbol *OptionsSymbol `json:"option_symbol"`
+}
+
+type OptionsSymbol struct {
+	OptionType       string            `json:"option_type"` // "CALL" or "PUT"
+	StrikePrice      float64           `json:"strike_price"`
+	ExpirationDate   string            `json:"expiration_date"`
+	UnderlyingSymbol *UnderlyingSymbol `json:"underlying_symbol"`
+}
+
+type UnderlyingSymbol struct {
+	Symbol string `json:"symbol"`
+}
+
 type registerResponse struct {
 	UserID     string `json:"userId"`
 	UserSecret string `json:"userSecret"`
@@ -122,7 +147,7 @@ func (c *Client) ListAccounts(userID, userSecret string) ([]Account, error) {
 	return out, nil
 }
 
-// GetPositions returns the positions held in a single account.
+// GetPositions returns the equity positions held in a single account.
 func (c *Client) GetPositions(userID, userSecret, accountID string) ([]Position, error) {
 	subpath := "/accounts/" + url.PathEscape(accountID) + "/positions"
 
@@ -134,6 +159,23 @@ func (c *Client) GetPositions(userID, userSecret, accountID string) ([]Position,
 	var out []Position
 	if err := json.Unmarshal(respBytes, &out); err != nil {
 		return nil, fmt.Errorf("snaptrade: decode positions: %w", err)
+	}
+
+	return out, nil
+}
+
+// ListOptionHoldings returns the option positions held in a single account.
+func (c *Client) ListOptionHoldings(userID, userSecret, accountID string) ([]OptionsPosition, error) {
+	subpath := "/accounts/" + url.PathEscape(accountID) + "/options"
+
+	respBytes, err := c.doRequest(http.MethodGet, subpath, userQuery(userID, userSecret), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var out []OptionsPosition
+	if err := json.Unmarshal(respBytes, &out); err != nil {
+		return nil, fmt.Errorf("snaptrade: decode option holdings: %w", err)
 	}
 
 	return out, nil
@@ -263,6 +305,48 @@ func TransformToConfigAssetGroup(account Account, positions []Position) c.Config
 		Name:     accountName(account),
 		Holdings: holdings,
 	}
+}
+
+// TransformToOptionsConfigAssetGroup maps an account's option positions into a
+// ticker asset group whose Options drive the strike/breakeven/premium display.
+// Each option is keyed by its underlying symbol (priced live by the normal
+// sources). Returns ok=false when the account holds no resolvable options.
+func TransformToOptionsConfigAssetGroup(account Account, positions []OptionsPosition) (c.ConfigAssetGroup, bool) {
+	options := make([]c.Option, 0, len(positions))
+
+	for _, position := range positions {
+		if option, ok := transformOptionPosition(position); ok {
+			options = append(options, option)
+		}
+	}
+
+	if len(options) == 0 {
+		return c.ConfigAssetGroup{}, false
+	}
+
+	return c.ConfigAssetGroup{
+		Name:    accountName(account) + " Options",
+		Options: options,
+	}, true
+}
+
+func transformOptionPosition(position OptionsPosition) (c.Option, bool) {
+	if position.Symbol == nil || position.Symbol.OptionSymbol == nil {
+		return c.Option{}, false
+	}
+
+	optionSymbol := position.Symbol.OptionSymbol
+	if optionSymbol.UnderlyingSymbol == nil || optionSymbol.UnderlyingSymbol.Symbol == "" {
+		return c.Option{}, false
+	}
+
+	return c.Option{
+		Symbol:      optionSymbol.UnderlyingSymbol.Symbol,
+		StrikePrice: optionSymbol.StrikePrice,
+		Type:        strings.ToLower(optionSymbol.OptionType),
+		Premium:     position.AveragePurchasePrice,
+		Contracts:   position.Units,
+	}, true
 }
 
 func transformPositionToLot(position Position) (c.Lot, bool) {

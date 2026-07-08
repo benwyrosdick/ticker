@@ -134,6 +134,63 @@ var _ = Describe("SnapTrade Client", func() {
 		})
 	})
 
+	Describe("ListOptionHoldings", func() {
+		It("should return the option positions for an account", func() {
+			server.AppendHandlers(
+				ghttp.CombineHandlers(
+					ghttp.VerifyRequest("GET", "/accounts/acct-1/options"),
+					ghttp.RespondWithJSONEncoded(http.StatusOK, []OptionsPosition{
+						{
+							Symbol: &OptionBrokerageSymbol{OptionSymbol: &OptionsSymbol{
+								OptionType:       "CALL",
+								StrikePrice:      455,
+								UnderlyingSymbol: &UnderlyingSymbol{Symbol: "TSLA"},
+							}},
+							Units:                2,
+							AveragePurchasePrice: 6.5,
+						},
+					}),
+				),
+			)
+
+			positions, err := New(server.URL(), "client-id", "consumer-key").ListOptionHoldings("ben", "secret", "acct-1")
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(positions).To(HaveLen(1))
+			Expect(positions[0].Symbol.OptionSymbol.StrikePrice).To(Equal(455.0))
+		})
+	})
+
+	Describe("TransformToOptionsConfigAssetGroup", func() {
+		It("should map option positions to a named options group keyed by underlying", func() {
+			positions := []OptionsPosition{
+				{
+					Symbol: &OptionBrokerageSymbol{OptionSymbol: &OptionsSymbol{
+						OptionType:       "PUT",
+						StrikePrice:      255,
+						UnderlyingSymbol: &UnderlyingSymbol{Symbol: "AAPL"},
+					}},
+					Units:                1,
+					AveragePurchasePrice: 2.7,
+				},
+			}
+
+			group, ok := TransformToOptionsConfigAssetGroup(Account{ID: "acct-1", Name: "Robinhood"}, positions)
+
+			Expect(ok).To(BeTrue())
+			Expect(group.Name).To(Equal("Robinhood Options"))
+			Expect(group.Options).To(Equal([]c.Option{
+				{Symbol: "AAPL", StrikePrice: 255, Type: "put", Premium: 2.7, Contracts: 1},
+			}))
+		})
+
+		It("should return ok=false when there are no resolvable options", func() {
+			_, ok := TransformToOptionsConfigAssetGroup(Account{ID: "acct-1"}, []OptionsPosition{{Symbol: nil}})
+
+			Expect(ok).To(BeFalse())
+		})
+	})
+
 	Describe("sign", func() {
 		var client *Client
 

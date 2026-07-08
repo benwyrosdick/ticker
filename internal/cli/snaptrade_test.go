@@ -67,6 +67,9 @@ var _ = Describe("SnapTrade", func() {
 						{Symbol: &snaptrade.PositionSymbol{Symbol: &snaptrade.UniversalSymbol{Symbol: "AAPL"}}, Units: 10, AveragePurchasePrice: 150},
 					}),
 				)
+				server.RouteToHandler("GET", "/accounts/acct-1/options",
+					ghttp.RespondWithJSONEncoded(http.StatusOK, []snaptrade.OptionsPosition{}),
+				)
 
 				groups, err := cli.RefreshSnapTradeGroups(dep, config)
 
@@ -77,6 +80,44 @@ var _ = Describe("SnapTrade", func() {
 				Expect(groups[0].Holdings).To(Equal([]c.Lot{{Symbol: "AAPL", Quantity: 10, UnitCost: 150}}))
 				Expect(groups[0].SymbolsBySource).To(HaveLen(1))
 				Expect(groups[0].SymbolsBySource[0].Source).To(Equal(c.QuoteSourceYahoo))
+			})
+		})
+
+		When("an account holds options", func() {
+			It("should add a separate options group per account", func() {
+				seedSecret()
+				server.RouteToHandler("GET", "/accounts",
+					ghttp.RespondWithJSONEncoded(http.StatusOK, []snaptrade.Account{{ID: "acct-1", Name: "Robinhood Individual"}}),
+				)
+				server.RouteToHandler("GET", "/accounts/acct-1/positions",
+					ghttp.RespondWithJSONEncoded(http.StatusOK, []snaptrade.Position{
+						{Symbol: &snaptrade.PositionSymbol{Symbol: &snaptrade.UniversalSymbol{Symbol: "AAPL"}}, Units: 10, AveragePurchasePrice: 150},
+					}),
+				)
+				server.RouteToHandler("GET", "/accounts/acct-1/options",
+					ghttp.RespondWithJSONEncoded(http.StatusOK, []snaptrade.OptionsPosition{
+						{
+							Symbol: &snaptrade.OptionBrokerageSymbol{OptionSymbol: &snaptrade.OptionsSymbol{
+								OptionType:       "PUT",
+								StrikePrice:      255,
+								UnderlyingSymbol: &snaptrade.UnderlyingSymbol{Symbol: "AAPL"},
+							}},
+							Units:                2,
+							AveragePurchasePrice: 2.7,
+						},
+					}),
+				)
+
+				groups, err := cli.RefreshSnapTradeGroups(dep, config)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(groups).To(HaveLen(2))
+				Expect(groups[0].Name).To(Equal("Robinhood Individual"))
+				Expect(groups[1].Name).To(Equal("Robinhood Individual Options"))
+				Expect(groups[1].IsSnapTrade).To(BeTrue())
+				Expect(groups[1].Options).To(Equal([]c.Option{
+					{Symbol: "AAPL", StrikePrice: 255, Type: "put", Premium: 2.7, Contracts: 2},
+				}))
 			})
 		})
 
@@ -95,6 +136,9 @@ var _ = Describe("SnapTrade", func() {
 					ghttp.RespondWithJSONEncoded(http.StatusOK, []snaptrade.Position{
 						{Symbol: &snaptrade.PositionSymbol{Symbol: &snaptrade.UniversalSymbol{Symbol: "AAPL"}}, Units: 5, AveragePurchasePrice: 100},
 					}),
+				)
+				server.RouteToHandler("GET", "/accounts/acct-1/options",
+					ghttp.RespondWithJSONEncoded(http.StatusOK, []snaptrade.OptionsPosition{}),
 				)
 
 				groups, err := cli.RefreshSnapTradeGroups(dep, personalConfig)
