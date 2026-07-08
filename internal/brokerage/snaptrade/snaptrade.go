@@ -316,7 +316,7 @@ func TransformToConfigAssetGroup(account Account, positions []Position, optionPo
 	}
 
 	return c.ConfigAssetGroup{
-		Name:     accountName(account),
+		Name:     AccountName(account),
 		Holdings: holdings,
 		Options:  options,
 	}
@@ -366,7 +366,8 @@ func positionTicker(position Position) string {
 	return position.Symbol.Symbol.Symbol
 }
 
-func accountName(account Account) string {
+// AccountName returns a display name for an account, falling back to its number then id.
+func AccountName(account Account) string {
 	if account.Name != "" {
 		return account.Name
 	}

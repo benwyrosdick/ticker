@@ -14,88 +14,104 @@ import (
 	c "github.com/achannarasappa/ticker/v5/internal/common"
 )
 
-// buildSnapTradeGroups fetches the user's brokerage accounts and positions from
-// SnapTrade and returns one asset group per account. Every failure degrades to
-// an empty result so ticker always starts; warnings are emitted only in debug mode.
-func buildSnapTradeGroups(d c.Dependencies, config c.Config, tickerSymbolToSourceSymbol symbol.TickerSymbolToSourceSymbol) []c.AssetGroup {
+// snapTradeSession resolves the read-path credentials for SnapTrade requests.
+// ok is false when SnapTrade isn't configured or the user isn't connected.
+func snapTradeSession(d c.Dependencies, config c.Config) (client *snaptrade.Client, userID string, userSecret string, ok bool) {
 
 	st := config.SnapTrade
 
 	if st.ClientID == "" || st.ConsumerKey == "" {
-		return nil
+		return nil, "", "", false
 	}
-
-	userID, userSecret := "", ""
 
 	if !st.IsPersonal() {
 		if st.UserID == "" {
 			logSnapTradeWarning(config, "commercial keys require `user-id`", nil)
 
-			return nil
+			return nil, "", "", false
 		}
 
-		secret, ok, err := snaptrade.NewStore(d.Fs, xdg.DataHome).GetUserSecret(st.UserID)
-		if err != nil || !ok {
+		secret, found, err := snaptrade.NewStore(d.Fs, xdg.DataHome).GetUserSecret(st.UserID)
+		if err != nil || !found {
 			logSnapTradeWarning(config, "not connected — run `ticker snaptrade connect`", err)
 
-			return nil
+			return nil, "", "", false
 		}
 
 		userID, userSecret = st.UserID, secret
 	}
 
-	client := snaptrade.New(d.SnapTradeBaseURL, st.ClientID, st.ConsumerKey)
+	return snaptrade.New(d.SnapTradeBaseURL, st.ClientID, st.ConsumerKey), userID, userSecret, true
+}
+
+// FetchSnapTradeAccountGroups lists the connected brokerage accounts and returns a
+// placeholder asset group per account (name + account id, no holdings yet). This is
+// fast; holdings for each account are loaded lazily via LoadSnapTradeAccountGroup.
+func FetchSnapTradeAccountGroups(d c.Dependencies, config c.Config) ([]c.AssetGroup, error) {
+
+	client, userID, userSecret, ok := snapTradeSession(d, config)
+	if !ok {
+		return nil, nil
+	}
 
 	accounts, err := client.ListAccounts(userID, userSecret)
 	if err != nil {
 		logSnapTradeWarning(config, "unable to list accounts", err)
 
-		return nil
+		return nil, err
 	}
 
 	groups := make([]c.AssetGroup, 0, len(accounts))
 
 	for _, account := range accounts {
-		positions, err := client.GetPositions(userID, userSecret, account.ID)
-		if err != nil {
-			logSnapTradeWarning(config, "unable to get positions", err)
-
-			continue
-		}
-
-		// Options come from a separate endpoint; a failure there shouldn't hide holdings.
-		optionPositions, err := client.ListOptionHoldings(userID, userSecret, account.ID)
-		if err != nil {
-			logSnapTradeWarning(config, "unable to get option holdings", err)
-
-			optionPositions = nil
-		}
-
-		group := buildAssetGroup(snaptrade.TransformToConfigAssetGroup(account, positions, optionPositions), tickerSymbolToSourceSymbol)
-
-		// Skip accounts with nothing to show (e.g. a crypto-only account returns no
-		// equity positions or options here) rather than adding an empty tab.
-		if len(group.SymbolsBySource) == 0 {
-			continue
-		}
-
-		group.IsSnapTrade = true
-		groups = append(groups, group)
+		groups = append(groups, c.AssetGroup{
+			ConfigAssetGroup:   c.ConfigAssetGroup{Name: snaptrade.AccountName(account)},
+			IsSnapTrade:        true,
+			SnapTradeAccountID: account.ID,
+		})
 	}
 
-	return groups
+	return groups, nil
 }
 
-// RefreshSnapTradeGroups re-fetches SnapTrade accounts and positions and returns
-// the rebuilt asset groups. Used by the UI's on-demand refresh keybinding.
-func RefreshSnapTradeGroups(d c.Dependencies, config c.Config) ([]c.AssetGroup, error) {
+// LoadSnapTradeAccountGroup fetches the positions and options for a single account
+// and returns a fully-resolved asset group. Called on demand when an account's tab
+// is first viewed so the first account displays without waiting for the rest.
+func LoadSnapTradeAccountGroup(d c.Dependencies, config c.Config, accountID string, accountName string) (c.AssetGroup, error) {
 
-	tickerSymbolToSourceSymbol, err := symbol.GetTickerSymbols(d.SymbolsURL)
-	if err != nil {
-		return nil, err
+	client, userID, userSecret, ok := snapTradeSession(d, config)
+	if !ok {
+		return c.AssetGroup{}, nil
 	}
 
-	return buildSnapTradeGroups(d, config, tickerSymbolToSourceSymbol), nil
+	positions, err := client.GetPositions(userID, userSecret, accountID)
+	if err != nil {
+		logSnapTradeWarning(config, "unable to get positions", err)
+
+		return c.AssetGroup{}, err
+	}
+
+	// Options come from a separate endpoint; a failure there shouldn't hide holdings.
+	optionPositions, err := client.ListOptionHoldings(userID, userSecret, accountID)
+	if err != nil {
+		logSnapTradeWarning(config, "unable to get option holdings", err)
+
+		optionPositions = nil
+	}
+
+	// Equity symbols resolve to the default source without the CSV, so degrade to an
+	// empty map if it can't be fetched rather than failing the whole account.
+	tickerSymbolToSourceSymbol, err := symbol.GetTickerSymbols(d.SymbolsURL)
+	if err != nil {
+		tickerSymbolToSourceSymbol = symbol.TickerSymbolToSourceSymbol{}
+	}
+
+	account := snaptrade.Account{ID: accountID, Name: accountName}
+	group := buildAssetGroup(snaptrade.TransformToConfigAssetGroup(account, positions, optionPositions), tickerSymbolToSourceSymbol)
+	group.IsSnapTrade = true
+	group.SnapTradeAccountID = accountID
+
+	return group, nil
 }
 
 // ConnectSnapTrade runs the one-time connection flow: register the user if
