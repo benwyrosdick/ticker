@@ -184,13 +184,12 @@ groups:
 
 Each option is its own row, keyed by contract rather than by symbol. You can list multiple options on the same underlying (e.g. different strikes or expirations) and they each get a distinct row, and a stock holding and an option on the same underlying appear as separate rows. When a group mixes holdings and options, they are shown as separate labeled lists (`Holdings` then `Options`).
 
-When viewing options with `--show-fundamentals`:
-* **Strike Price** - The strike price of the option contract
-* **Breakeven** - Calculated breakeven price (strike + premium for calls, strike - premium for puts)
-* **Strike Diff** - Current underlying price minus strike price
-* **Premium** - Premium paid per share (cost basis)
-* **Cur. Premium** - Current market premium per share (shown when available, e.g. from a broker)
-* **Status** - Whether the option is in, at, or out of the money (`ITM` / `ATM` / `OTM`)
+When viewing options with `--show-fundamentals` (columns left → right):
+* **Strike Price** / **Breakeven** - Contract terms (breakeven is strike ± premium for calls/puts)
+* **Strike Diff** / **Status** - Distance to strike and moneyness (`ITM` / `ATM` / `OTM`)
+* **Premium** / **Cur. Premium** - Cost basis vs current mark per share (mark shown when available, e.g. from a broker)
+* **Contracts** / **Total Premium** - Position size (with `--show-positions`)
+* **Underlying price** with **premium change** underneath (mark − cost), not the underlying's day move
 
 * `symbol` - Ticker symbol of the underlying asset
 * `strike_price` - Strike price of the option

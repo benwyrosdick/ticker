@@ -770,13 +770,14 @@ var _ = Describe("Watchlist", func() {
 			Expect(optionsHeadingIndex).To(BeNumerically("<", aaplIndex))
 		})
 
-		It("should render current premium and in/out-of-the-money status for options", func() {
+		It("should render option columns grouped by contract, moneyness, and premium", func() {
 			m := NewModel(Config{Styles: stylesFixture, ExtraInfoFundamentals: true, Sort: "alpha"})
 			m, _ = m.Update(tea.WindowSizeMsg{Width: 300})
 			m, _ = m.Update(SetAssetsMsg([]c.Asset{
 				{
 					Symbol: "AAPL", Name: "PUT 255 07/10", Class: c.AssetClassOption,
-					QuotePrice: c.QuotePrice{Price: 250.0},
+					// Underlying day move would be -10; premium change is +1.50 (+55.56%)
+					QuotePrice: c.QuotePrice{Price: 250.0, Change: -10.0, ChangePercent: -3.85},
 					QuoteOption: c.QuoteOption{
 						StrikePrice: 255, BreakevenPrice: 252.3, Type: "put",
 						Premium: 2.7, CurrentPremium: 4.2, DiffToStrike: -5,
@@ -787,10 +788,20 @@ var _ = Describe("Watchlist", func() {
 
 			view := removeFormatting(m.View())
 
-			Expect(view).To(ContainSubstring("Cur. Premium:"))
+			// Contract definition
+			Expect(view).To(ContainSubstring("Strike Price:"))
+			Expect(view).To(ContainSubstring("Breakeven:"))
+			// Moneyness pair
+			Expect(view).To(ContainSubstring("Strike Diff:"))
 			Expect(view).To(ContainSubstring("Status:"))
+			Expect(view).To(ContainSubstring("ITM")) // put with underlying below strike
+			// Premium pair
+			Expect(view).To(ContainSubstring("Premium:"))
+			Expect(view).To(ContainSubstring("Cur. Premium:"))
 			Expect(view).To(ContainSubstring("4.20")) // current premium per share
-			Expect(view).To(ContainSubstring("ITM"))  // put with underlying below strike
+			// Premium change under the underlying price (4.2 - 2.7 = +1.50), not stock day move
+			Expect(view).To(ContainSubstring("1.50"))
+			Expect(view).NotTo(ContainSubstring("-10.00"))
 		})
 
 		It("should not render headings when the group has only holdings", func() {

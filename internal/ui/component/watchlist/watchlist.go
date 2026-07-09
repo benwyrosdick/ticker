@@ -267,9 +267,34 @@ func getCellWidths(assets []*c.Asset) row.CellWidthsContainer {
 
 		}
 
-		// Options reuse the position-extended column for contracts / total premium,
-		// so size that column to fit those values too.
+		// Options remap the fundamental columns and reuse position-extended for
+		// contracts / total premium — size each to the values actually shown.
 		if asset.Class == c.AssetClassOption {
+			strikeLen := len(u.ConvertFloatToStringWithCommas(asset.QuoteOption.StrikePrice, asset.Meta.IsVariablePrecision))
+			breakevenLen := len(u.ConvertFloatToStringWithCommas(asset.QuoteOption.BreakevenPrice, asset.Meta.IsVariablePrecision))
+			diffLen := len(u.ConvertFloatToStringWithCommas(asset.QuoteOption.DiffToStrike, asset.Meta.IsVariablePrecision))
+			premiumLen := len(u.ConvertFloatToStringWithCommas(asset.QuoteOption.Premium, asset.Meta.IsVariablePrecision))
+			curPremiumLen := 1 // "-"
+			if asset.QuoteOption.CurrentPremium != 0.0 {
+				curPremiumLen = len(u.ConvertFloatToStringWithCommas(asset.QuoteOption.CurrentPremium, asset.Meta.IsVariablePrecision))
+			}
+
+			if strikeLen > cellMaxWidths.WidthVolumeMarketCap {
+				cellMaxWidths.WidthVolumeMarketCap = strikeLen
+			}
+			if breakevenLen > cellMaxWidths.WidthVolumeMarketCap {
+				cellMaxWidths.WidthVolumeMarketCap = breakevenLen
+			}
+			if diffLen > cellMaxWidths.WidthQuoteRange {
+				cellMaxWidths.WidthQuoteRange = diffLen
+			}
+			if premiumLen > cellMaxWidths.WidthQuoteExtended {
+				cellMaxWidths.WidthQuoteExtended = premiumLen
+			}
+			if curPremiumLen > cellMaxWidths.WidthQuoteExtended {
+				cellMaxWidths.WidthQuoteExtended = curPremiumLen
+			}
+
 			totalPremium := math.Abs(asset.QuoteOption.Premium * asset.QuoteOption.Contracts * 100)
 			contractsLength := len(strconv.FormatFloat(math.Abs(asset.QuoteOption.Contracts), 'f', 0, 64))
 			totalPremiumLength := len(u.ConvertFloatToStringWithCommas(totalPremium, asset.Meta.IsVariablePrecision))
