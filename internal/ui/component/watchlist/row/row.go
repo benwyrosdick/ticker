@@ -497,7 +497,7 @@ func textQuoteRange(asset *c.Asset, styles c.Styles) string {
 func textQuoteRangeLabels(asset *c.Asset, styles c.Styles) string {
 
 	if asset.Class == c.AssetClassOption {
-		return styles.TextLabel("Diff to Strike:") +
+		return styles.TextLabel("Strike Diff:") +
 			"\n" +
 			styles.TextLabel("Premium:")
 	}

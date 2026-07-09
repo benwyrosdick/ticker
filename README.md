@@ -187,7 +187,7 @@ Each option is its own row, keyed by contract rather than by symbol. You can lis
 When viewing options with `--show-fundamentals`:
 * **Strike Price** - The strike price of the option contract
 * **Breakeven** - Calculated breakeven price (strike + premium for calls, strike - premium for puts)
-* **Diff to Strike** - Current underlying price minus strike price
+* **Strike Diff** - Current underlying price minus strike price
 * **Premium** - Premium paid per share (cost basis)
 * **Cur. Premium** - Current market premium per share (shown when available, e.g. from a broker)
 * **Status** - Whether the option is in, at, or out of the money (`ITM` / `ATM` / `OTM`)
