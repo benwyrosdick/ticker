@@ -2,6 +2,8 @@ package watchlist
 
 import (
 	"fmt"
+	"math"
+	"strconv"
 	"strings"
 
 	c "github.com/achannarasappa/ticker/v5/internal/common"
@@ -263,6 +265,21 @@ func getCellWidths(assets []*c.Asset) row.CellWidthsContainer {
 				cellMaxWidths.WidthPositionExtended = positionUnitCostLength
 			}
 
+		}
+
+		// Options reuse the position-extended column for contracts / total premium,
+		// so size that column to fit those values too.
+		if asset.Class == c.AssetClassOption {
+			totalPremium := math.Abs(asset.QuoteOption.Premium * asset.QuoteOption.Contracts * 100)
+			contractsLength := len(strconv.FormatFloat(math.Abs(asset.QuoteOption.Contracts), 'f', 0, 64))
+			totalPremiumLength := len(u.ConvertFloatToStringWithCommas(totalPremium, asset.Meta.IsVariablePrecision))
+
+			if contractsLength > cellMaxWidths.WidthPositionExtended {
+				cellMaxWidths.WidthPositionExtended = contractsLength
+			}
+			if totalPremiumLength > cellMaxWidths.WidthPositionExtended {
+				cellMaxWidths.WidthPositionExtended = totalPremiumLength
+			}
 		}
 
 	}

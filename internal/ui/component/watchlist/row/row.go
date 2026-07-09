@@ -1,6 +1,7 @@
 package row
 
 import (
+	"math"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -288,47 +289,46 @@ func (m *Model) buildCells() []grid.Cell {
 	}
 
 	if m.config.ExtraInfoFundamentals {
-		cells = append(
-			[]grid.Cell{
-				{
-					Text:            textVolumeMarketCapLabels(m.config.Asset, m.config.Styles),
-					Width:           WidthLabel,
-					Align:           grid.Right,
-					VisibleMinWidth: widthMinTerm + m.cellWidths.WidthQuoteExtended + (6 * WidthGutter) + (3 * WidthLabel) + m.cellWidths.WidthQuoteRange + m.cellWidths.WidthVolumeMarketCap,
-				},
-				{
-					Text:            textVolumeMarketCap(m.config.Asset, m.config.Styles),
-					Width:           m.cellWidths.WidthVolumeMarketCap,
-					Align:           grid.Right,
-					VisibleMinWidth: widthMinTerm + m.cellWidths.WidthQuoteExtended + (5 * WidthGutter) + (2 * WidthLabel) + m.cellWidths.WidthQuoteRange + m.cellWidths.WidthVolumeMarketCap,
-				},
-				{
-					Text:            textQuoteRangeLabels(m.config.Asset, m.config.Styles),
-					Width:           WidthLabel,
-					Align:           grid.Right,
-					VisibleMinWidth: widthMinTerm + m.cellWidths.WidthQuoteExtended + (4 * WidthGutter) + (2 * WidthLabel) + m.cellWidths.WidthQuoteRange,
-				},
-				{
-					Text:            textQuoteRange(m.config.Asset, m.config.Styles),
-					Width:           m.cellWidths.WidthQuoteRange,
-					Align:           grid.Right,
-					VisibleMinWidth: widthMinTerm + m.cellWidths.WidthQuoteExtended + (3 * WidthGutter) + WidthLabel + m.cellWidths.WidthQuoteRange,
-				},
-				{
-					Text:            textQuoteExtendedLabels(m.config.Asset, m.config.Styles),
-					Width:           WidthLabel,
-					Align:           grid.Right,
-					VisibleMinWidth: widthMinTerm + m.cellWidths.WidthQuoteExtended + (2 * WidthGutter) + WidthLabel,
-				},
-				{
-					Text:            textQuoteExtended(m.config.Asset, m.config.Styles),
-					Width:           m.cellWidths.WidthQuoteExtended,
-					Align:           grid.Right,
-					VisibleMinWidth: widthMinTerm + m.cellWidths.WidthQuoteExtended + WidthGutter,
-				},
+		fundamentalCells := []grid.Cell{
+			{
+				Text:            textVolumeMarketCapLabels(m.config.Asset, m.config.Styles),
+				Width:           WidthLabel,
+				Align:           grid.Right,
+				VisibleMinWidth: widthMinTerm + m.cellWidths.WidthQuoteExtended + (6 * WidthGutter) + (3 * WidthLabel) + m.cellWidths.WidthQuoteRange + m.cellWidths.WidthVolumeMarketCap,
 			},
-			cells...,
-		)
+			{
+				Text:            textVolumeMarketCap(m.config.Asset, m.config.Styles),
+				Width:           m.cellWidths.WidthVolumeMarketCap,
+				Align:           grid.Right,
+				VisibleMinWidth: widthMinTerm + m.cellWidths.WidthQuoteExtended + (5 * WidthGutter) + (2 * WidthLabel) + m.cellWidths.WidthQuoteRange + m.cellWidths.WidthVolumeMarketCap,
+			},
+			{
+				Text:            textQuoteRangeLabels(m.config.Asset, m.config.Styles),
+				Width:           WidthLabel,
+				Align:           grid.Right,
+				VisibleMinWidth: widthMinTerm + m.cellWidths.WidthQuoteExtended + (4 * WidthGutter) + (2 * WidthLabel) + m.cellWidths.WidthQuoteRange,
+			},
+			{
+				Text:            textQuoteRange(m.config.Asset, m.config.Styles),
+				Width:           m.cellWidths.WidthQuoteRange,
+				Align:           grid.Right,
+				VisibleMinWidth: widthMinTerm + m.cellWidths.WidthQuoteExtended + (3 * WidthGutter) + WidthLabel + m.cellWidths.WidthQuoteRange,
+			},
+			{
+				Text:            textQuoteExtendedLabels(m.config.Asset, m.config.Styles),
+				Width:           WidthLabel,
+				Align:           grid.Right,
+				VisibleMinWidth: widthMinTerm + m.cellWidths.WidthQuoteExtended + (2 * WidthGutter) + WidthLabel,
+			},
+			{
+				Text:            textQuoteExtended(m.config.Asset, m.config.Styles),
+				Width:           m.cellWidths.WidthQuoteExtended,
+				Align:           grid.Right,
+				VisibleMinWidth: widthMinTerm + m.cellWidths.WidthQuoteExtended + WidthGutter,
+			},
+		}
+
+		cells = append(fundamentalCells, cells...)
 	}
 
 	cells = append(
@@ -437,6 +437,18 @@ func textQuoteExtendedLabels(asset *c.Asset, styles c.Styles) string {
 
 func textPositionExtended(asset *c.Asset, styles c.Styles) string {
 
+	// Options reuse this column (aligning with a holding's Avg Cost / Quantity)
+	// to show the contract count and total premium.
+	if asset.Class == c.AssetClassOption {
+		const sharesPerContract = 100
+		contracts := math.Abs(asset.QuoteOption.Contracts)
+		totalPremium := math.Abs(asset.QuoteOption.Premium * asset.QuoteOption.Contracts * sharesPerContract)
+
+		return styles.Text(strconv.FormatFloat(contracts, 'f', 0, 64)) +
+			"\n" +
+			styles.Text(u.ConvertFloatToStringWithCommas(totalPremium, asset.Meta.IsVariablePrecision))
+	}
+
 	if asset.Position.Quantity == 0.0 {
 		return ""
 	}
@@ -448,6 +460,12 @@ func textPositionExtended(asset *c.Asset, styles c.Styles) string {
 }
 
 func textPositionExtendedLabels(asset *c.Asset, styles c.Styles) string {
+
+	if asset.Class == c.AssetClassOption {
+		return styles.TextLabel("Contracts:") +
+			"\n" +
+			styles.TextLabel("Total Premium:")
+	}
 
 	if asset.Position.Quantity == 0.0 {
 		return ""
