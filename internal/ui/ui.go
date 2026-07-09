@@ -420,7 +420,7 @@ func (m *Model) modalView() string {
 }
 
 // Update hook for bubbletea
-func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) { //nolint:maintidx
+func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) { //nolint:maintidx,gocyclo
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {

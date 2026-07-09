@@ -191,7 +191,9 @@ func (m *Model) View() string {
 		return strings.Join(sections, "\n")
 	}
 
-	rows := append(holdingsRows, optionsRows...)
+	rows := make([]string, 0, len(holdingsRows)+len(optionsRows))
+	rows = append(rows, holdingsRows...)
+	rows = append(rows, optionsRows...)
 
 	return strings.Join(rows, "\n")
 
