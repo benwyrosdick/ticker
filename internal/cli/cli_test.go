@@ -518,6 +518,21 @@ var _ = Describe("Cli", func() {
 						Expect(outputErr).To(BeNil())
 					})
 				})
+				When("there is a config file in ~/.config/ticker", func() {
+					It("should read config.yaml from the documented default location", func() {
+						// On macOS, xdg.ConfigHome is ~/Library/Application Support,
+						// not ~/.config. The documented default path must still work.
+						inputHome, _ := homedir.Dir()
+						inputConfigPath := ""
+						configDir := inputHome + "/.config/ticker"
+						depLocal.Fs.MkdirAll(configDir, 0755)
+						afero.WriteFile(depLocal.Fs, configDir+"/config.yaml", []byte("watchlist:\n  - TSLA"), 0644)
+						outputConfig, outputErr := GetConfig(depLocal, inputConfigPath, cli.Options{})
+
+						Expect(outputConfig.Watchlist).To(Equal([]string{"TSLA"}))
+						Expect(outputErr).To(BeNil())
+					})
+				})
 				When("there is a config file in the home directory", func() {
 					It("should read the config file from disk", func() {
 						inputHome, _ := homedir.Dir()

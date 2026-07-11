@@ -278,14 +278,19 @@ func getConfigPath(fs afero.Fs, configPathOption string) (string, error) {
 
 	home, _ := homedir.Dir()
 
-	// Search the current (XDG) location first, then the legacy locations for
-	// backward compatibility. The primary default is ~/.config/ticker/config.yaml.
+	// Documented default is always ~/.config/ticker/config.yaml. On macOS,
+	// adrg/xdg maps ConfigHome to ~/Library/Application Support, so that
+	// platform path is searched as well. Legacy .ticker.yaml locations are
+	// kept for backward compatibility.
+	dotConfigTicker := home + "/.config/ticker"
+	xdgTicker := xdg.ConfigHome + "/ticker"
+
 	searches := []struct {
 		name  string
 		paths []string
 	}{
-		{name: "config", paths: []string{xdg.ConfigHome + "/ticker"}},
-		{name: ".ticker", paths: []string{home, ".", xdg.ConfigHome, xdg.ConfigHome + "/ticker"}},
+		{name: "config", paths: uniquePaths(dotConfigTicker, xdgTicker)},
+		{name: ".ticker", paths: uniquePaths(home, ".", home+"/.config", xdg.ConfigHome, dotConfigTicker, xdgTicker)},
 	}
 
 	var err error
@@ -305,6 +310,26 @@ func getConfigPath(fs afero.Fs, configPathOption string) (string, error) {
 	}
 
 	return "", fmt.Errorf("invalid config: %w", err)
+}
+
+// uniquePaths returns paths with empty strings and duplicates removed,
+// preserving order so search precedence stays stable.
+func uniquePaths(paths ...string) []string {
+	seen := make(map[string]struct{}, len(paths))
+	out := make([]string, 0, len(paths))
+
+	for _, p := range paths {
+		if p == "" {
+			continue
+		}
+		if _, ok := seen[p]; ok {
+			continue
+		}
+		seen[p] = struct{}{}
+		out = append(out, p)
+	}
+
+	return out
 }
 
 func getRefreshInterval(optionsRefreshInterval int, configRefreshInterval int) int {
